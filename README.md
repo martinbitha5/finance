@@ -1,4 +1,12 @@
-# MONY — Ton argent, en clair.
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="public/brand/mony-logo-light.svg">
+    <source media="(prefers-color-scheme: light)" srcset="public/brand/mony-logo-dark.svg">
+    <img src="public/brand/mony-logo-dark.svg" alt="MONY" width="320">
+  </picture>
+</p>
+
+<p align="center"><strong>Ton argent, en clair.</strong></p>
 
 Application web de gestion financière personnelle, mobile-first, installable en PWA.
 Elle répond à une question simple : **où part mon argent, et combien puis-je dépenser aujourd'hui jusqu'à la prochaine paie ?**
