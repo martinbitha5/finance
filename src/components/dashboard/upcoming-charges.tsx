@@ -4,6 +4,7 @@ import type { UpcomingCharge } from "@/lib/finance/types";
 import type { Currency } from "@/lib/constants";
 import { formatMoney, formatDayLabel } from "@/lib/format";
 import { IconBubble } from "@/components/ui/primitives";
+import { brandFor } from "@/lib/finance/brands";
 import { CardTitle } from "@/components/ui/card";
 
 /**
@@ -64,9 +65,10 @@ export function UpcomingCharges({ charges, currency, total, salary }: { charges:
 }
 
 function ChargeRow({ c, currency, afterPayday = false }: { c: UpcomingCharge; currency: Currency; afterPayday?: boolean }) {
+  const brand = brandFor(c.name);
   return (
     <li className="flex items-center gap-3 py-2.5 first:pt-0">
-      <IconBubble icon={c.icon} color={c.color} size="sm" />
+      <IconBubble icon={c.icon} color={brand?.color ?? c.color} size="sm" logo={brand?.domain} />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-semibold truncate">{c.name}</div>
         <div className="text-xs text-fg-muted">

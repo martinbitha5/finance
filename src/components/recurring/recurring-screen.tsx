@@ -7,6 +7,7 @@ import { CURRENCIES, FREQUENCIES, PAYMENT_METHODS, type Currency, type Frequency
 import { formatMoney, formatDate } from "@/lib/format";
 import { convert } from "@/lib/finance/currency";
 import { monthlyEquivalent, describeWeekdays, WEEKDAYS } from "@/lib/finance/cycles";
+import { brandFor } from "@/lib/finance/brands";
 import { createRecurring, deleteRecurring, toggleRecurring, updateRecurring } from "@/actions/recurring";
 import { useAction } from "@/hooks/use-action";
 import { Sheet, ConfirmSheet } from "@/components/ui/sheet";
@@ -46,9 +47,10 @@ export function RecurringScreen({ items, categories, currency, rates, today }: {
         <ul className="card p-0 overflow-hidden divide-y divide-border">
           {items.map((r) => {
             const cat = r.category_id ? catById.get(r.category_id) : undefined;
+            const brand = brandFor(r.name);
             return (
               <li key={r.id} className={cn("flex items-center gap-3 px-4 py-3", !r.is_active && "opacity-60")}>
-                <IconBubble icon={cat?.icon ?? "🔁"} color={cat?.color} />
+                <IconBubble icon={cat?.icon ?? "🔁"} color={brand?.color ?? cat?.color} logo={brand?.domain} />
                 <button type="button" className="flex-1 min-w-0 text-left" onClick={() => setEditing(r)}>
                   <div className="font-semibold truncate">{r.name}</div>
                   <div className="text-xs text-fg-muted">

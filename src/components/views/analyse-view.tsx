@@ -10,6 +10,8 @@ import { DailyAllowanceCard } from "@/components/dashboard/daily-allowance-card"
 import { DailyBars, TrendBars } from "@/components/charts/trend-bars";
 import { CardTitle } from "@/components/ui/card";
 import { Stat } from "@/components/ui/primitives";
+import { BrandLogo } from "@/components/ui/brand-logo";
+import { brandFor } from "@/lib/finance/brands";
 import { formatDate, formatMoney, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -59,9 +61,13 @@ export function AnalyseView() {
               />
             </div>
             <ul className="mt-4 flex flex-col gap-2.5">
-              {s.recurring.items.slice(0, 5).map((r) => (
+              {s.recurring.items.slice(0, 5).map((r) => {
+                const brand = brandFor(r.name);
+                return (
                 <li key={r.id} className="flex items-center gap-3 text-sm">
-                  <span className="w-7 text-center text-lg" aria-hidden>{r.icon}</span>
+                  <span className="w-7 flex items-center justify-center text-lg" aria-hidden>
+                    {brand ? <BrandLogo domain={brand.domain} fallback={r.icon} className="h-6 w-6 rounded-md" /> : r.icon}
+                  </span>
                   <span className="flex-1 min-w-0">
                     <span className="block font-semibold truncate">{r.name}</span>
                     <span className="block text-xs text-fg-subtle">
@@ -70,7 +76,8 @@ export function AnalyseView() {
                   </span>
                   <span className="tabular font-bold">{formatMoney(r.monthly, cur)}<span className="text-xs font-normal text-fg-subtle">/mois</span></span>
                 </li>
-              ))}
+                );
+              })}
             </ul>
             <p className="text-[11px] text-fg-subtle mt-3">Une charge apparaît dans « Où va ton argent » le jour où elle est prélevée.</p>
           </>

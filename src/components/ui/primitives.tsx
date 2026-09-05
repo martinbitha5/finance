@@ -1,5 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { BrandLogo } from "@/components/ui/brand-logo";
 import { formatMoney } from "@/lib/format";
 import type { Currency } from "@/lib/constants";
 
@@ -86,15 +87,16 @@ export function Money({
 }
 
 /* ---------- Icon bubble ---------- */
-export function IconBubble({ icon, color, size = "md", className }: { icon: string; color?: string; size?: "sm" | "md" | "lg"; className?: string }) {
+export function IconBubble({ icon, color, logo, size = "md", className }: { icon: string; color?: string; logo?: string | null; size?: "sm" | "md" | "lg"; className?: string }) {
   const s = size === "sm" ? "h-9 w-9 text-base rounded-xl" : size === "lg" ? "h-14 w-14 text-2xl rounded-2xl" : "h-11 w-11 text-xl rounded-2xl";
+  const img = size === "sm" ? "h-5 w-5 rounded-[5px]" : size === "lg" ? "h-8 w-8 rounded-lg" : "h-6 w-6 rounded-md";
   return (
     <div
       className={cn("inline-flex items-center justify-center shrink-0", s, className)}
       style={{ background: color ? `color-mix(in oklab, ${color} 18%, transparent)` : "var(--surface-2)" }}
       aria-hidden
     >
-      {icon}
+      {logo ? <BrandLogo domain={logo} fallback={icon} className={img} /> : icon}
     </div>
   );
 }

@@ -9,6 +9,7 @@ import type { Currency } from "@/lib/constants";
 import { formatMoney, formatMonth, toISODate, formatDayLabel } from "@/lib/format";
 import { occurrencesInRange, paydayInMonth } from "@/lib/finance/cycles";
 import { convert } from "@/lib/finance/currency";
+import { brandFor } from "@/lib/finance/brands";
 import { IconBubble } from "@/components/ui/primitives";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +17,7 @@ interface Event {
   id: string;
   date: string;
   icon: string;
+  logo?: string;
   color: string;
   label: string;
   amount: number | null;
@@ -55,11 +57,13 @@ export function FinancialCalendar({
     for (const t of transactions) {
       if (t.date < start || t.date >= end) continue;
       const cat = t.category_id ? catById.get(t.category_id) : undefined;
+      const brand = t.type === "expense" ? brandFor(t.description) : null;
       out.push({
         id: t.id,
         date: t.date,
         icon: t.type === "saving" ? "🎯" : cat?.icon ?? (t.type === "income" ? "💰" : "💳"),
-        color: t.type === "saving" ? "#EAB308" : cat?.color ?? (t.type === "income" ? "#22C55E" : "#94A3B8"),
+        logo: brand?.domain,
+        color: t.type === "saving" ? "#EAB308" : brand?.color ?? cat?.color ?? (t.type === "income" ? "#22C55E" : "#94A3B8"),
         label: t.description || cat?.name || "",
         amount: (t.type === "income" ? 1 : -1) * convert(t.amount, t.currency, currency, rates),
         kind: t.type === "income" ? (cat?.slug === "salary" ? "salary" : "income") : t.type,
@@ -70,9 +74,10 @@ export function FinancialCalendar({
     for (const r of recurring) {
       if (!r.is_active) continue;
       const cat = r.category_id ? catById.get(r.category_id) : undefined;
+      const brand = brandFor(r.name);
       for (const d of occurrencesInRange(r.next_date, r.frequency, r.day_of_month, { start: r.next_date > start ? r.next_date : start, end }, r.weekdays)) {
         if (d < today || postedRecurring.has(`${r.id}:${d}`)) continue;
-        out.push({ id: `${r.id}:${d}`, date: d, icon: cat?.icon ?? "🔁", color: cat?.color ?? "#94A3B8", label: r.name, amount: -convert(r.amount, r.currency, currency, rates), kind: "recurring", planned: true });
+        out.push({ id: `${r.id}:${d}`, date: d, icon: cat?.icon ?? "🔁", logo: brand?.domain, color: brand?.color ?? cat?.color ?? "#94A3B8", label: r.name, amount: -convert(r.amount, r.currency, currency, rates), kind: "recurring", planned: true });
       }
     }
     for (const s of incomeSources) {
@@ -174,7 +179,7 @@ function EventList({ events, currency, showDate }: { events: Event[]; currency: 
     <ul className="card p-0 overflow-hidden divide-y divide-border">
       {events.map((e) => (
         <li key={e.id} className="flex items-center gap-3 px-4 py-3">
-          <IconBubble icon={e.icon} color={e.color} size="sm" />
+          <IconBubble icon={e.icon} color={e.color} size="sm" logo={e.logo} />
           <div className="flex-1 min-w-0">
             <div className="font-semibold truncate">{e.label}</div>
             <div className="text-xs text-fg-muted">
