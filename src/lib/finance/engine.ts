@@ -2,7 +2,7 @@
  * MONY finance engine — the single source of truth for every number shown in the app.
  * Pure functions: no I/O, fully deterministic given a snapshot.
  */
-import { addDays, addMonths, differenceInCalendarMonths, parseISO, subMonths } from "date-fns";
+import { addDays, addMonths, differenceInCalendarMonths, getDaysInMonth, parseISO, subMonths } from "date-fns";
 import type {
   BalancePoint,
   BudgetStatus,
@@ -126,6 +126,8 @@ export function computeFinance(s: FinanceSnapshot): FinanceSummary {
   const prevMonthRange = monthRange(subMonths(s.today, 1));
   const monthStats = periodStats(posted, thisMonthRange, s.today, categoryById);
   const prevStats = periodStats(posted, prevMonthRange, subMonths(s.today, 1), categoryById);
+  const prevToDateEnd = toISODate(addDays(parseISO(prevMonthRange.start), Math.min(s.today.getDate(), getDaysInMonth(subMonths(s.today, 1)))));
+  const prevToDateStats = periodStats(posted, { start: prevMonthRange.start, end: prevToDateEnd < prevMonthRange.end ? prevToDateEnd : prevMonthRange.end }, subMonths(s.today, 1), categoryById);
   const monthTx = posted.filter((t) => inRange(t.date, thisMonthRange));
   const topExpenses = monthTx
     .filter((t) => t.type === "expense")
@@ -146,6 +148,7 @@ export function computeFinance(s: FinanceSnapshot): FinanceSummary {
     incomePct: pct(monthStats.income, prevStats.income),
     savingsPct: pct(monthStats.savings, prevStats.savings),
   };
+  const monthToDateChange = { expensesPct: pct(monthStats.expenses, prevToDateStats.expenses) };
 
   // ---------- Budgets (calendar month) ----------
   const budgets: BudgetStatus[] = s.budgets
@@ -263,7 +266,9 @@ export function computeFinance(s: FinanceSnapshot): FinanceSummary {
     projectedRemaining,
     month: { ...monthStats, topExpenses, dailySpend },
     previousMonth: prevStats,
+    previousMonthToDate: prevToDateStats,
     monthChange,
+    monthToDateChange,
     budgets,
     goals,
     totalSavedInGoals,

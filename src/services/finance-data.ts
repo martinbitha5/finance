@@ -9,6 +9,7 @@ import { advance } from "@/lib/finance/cycles";
 import { toISODate } from "@/lib/format";
 import type { FinanceSnapshot, FinanceSummary, Profile, Settings, AppNotification } from "@/lib/finance/types";
 import type { Currency } from "@/lib/constants";
+import type { TablesInsert } from "@/lib/supabase/database.types";
 
 export interface FinanceData {
   userId: string;
@@ -114,18 +115,7 @@ async function postDueRecurringExpenses(
   for (const r of due) {
     let cursor = parseISO(r.next_date);
     let guard = 0;
-    const rows: Parameters<typeof supabase.from<"transactions">>[0] extends never ? never : Array<{
-      user_id: string;
-      type: "expense";
-      amount: number;
-      currency: typeof r.currency;
-      category_id: string | null;
-      description: string;
-      date: string;
-      payment_method: typeof r.payment_method;
-      recurring_expense_id: string;
-      is_demo: boolean;
-    }> = [];
+    const rows: TablesInsert<"transactions">[] = [];
     while (toISODate(cursor) <= todayISO && guard++ < 120) {
       const iso = toISODate(cursor);
       if (!seen.has(`${r.id}:${iso}`)) {

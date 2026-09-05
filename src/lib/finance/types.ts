@@ -152,7 +152,11 @@ export interface FinanceSummary {
   projectedRemaining: number;
   month: PeriodStats & { topExpenses: Transaction[]; dailySpend: { date: string; amount: number }[] };
   previousMonth: PeriodStats;
+  /** Previous month, cut at the same day-of-month as today (fair month-to-date comparison). */
+  previousMonthToDate: PeriodStats;
   monthChange: { expensesPct: number | null; incomePct: number | null; savingsPct: number | null };
+  /** Month-to-date vs previous month-to-date. */
+  monthToDateChange: { expensesPct: number | null };
   budgets: BudgetStatus[];
   goals: GoalStatus[];
   totalSavedInGoals: number;

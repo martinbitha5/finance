@@ -57,8 +57,8 @@ export function buildInsights(s: FinanceSummary): Insight[] {
     }
   }
 
-  // Projection
-  if (s.cycle.daysRemaining > 1 && (s.avgDailySpend > 0 || s.remainingCharges > 0)) {
+  // Projection — needs a few days of data before the daily average means anything
+  if (s.cycle.daysRemaining > 1 && s.cycle.daysElapsed >= 3 && (s.avgDailySpend > 0 || s.remainingCharges > 0)) {
     if (s.projectedRemaining >= 0) {
       out.push({
         id: "projection",
@@ -97,17 +97,18 @@ export function buildInsights(s: FinanceSummary): Insight[] {
     }
   }
 
-  // Month over month
-  if (s.monthChange.expensesPct !== null && s.previousMonth.expenses > 0) {
-    const p = s.monthChange.expensesPct;
+  // Month over month — compared at the same point of the previous month, and only once a few days in
+  const dayOfMonth = Number(s.today.slice(8, 10));
+  if (dayOfMonth >= 5 && s.monthToDateChange.expensesPct !== null && s.previousMonthToDate.expenses >= 20) {
+    const p = s.monthToDateChange.expensesPct;
     if (p >= 10) {
       out.push({
         id: "mom_up",
         kind: "month_change",
         severity: "danger",
         icon: "🔴",
-        title: `Tes dépenses sont ${formatPercent(p)} plus élevées que le mois dernier.`,
-        body: `${money(s.month.expenses)} contre ${money(s.previousMonth.expenses)}.`,
+        title: `Tes dépenses sont ${formatPercent(p)} plus élevées que le mois dernier à la même date.`,
+        body: `${money(s.month.expenses)} contre ${money(s.previousMonthToDate.expenses)} au ${dayOfMonth} du mois dernier.`,
         href: "/rapport",
       });
     } else if (p <= -10) {
@@ -116,24 +117,26 @@ export function buildInsights(s: FinanceSummary): Insight[] {
         kind: "month_change",
         severity: "success",
         icon: "🟢",
-        title: `Tes dépenses ont baissé de ${formatPercent(Math.abs(p))} par rapport au mois dernier.`,
+        title: `Tes dépenses ont baissé de ${formatPercent(Math.abs(p))} par rapport au mois dernier à la même date.`,
         href: "/rapport",
       });
     }
   }
 
-  // Unusual category increase
-  for (const c of s.month.byCategory.slice(0, 5)) {
-    const prev = s.previousMonth.byCategory.find((p) => p.categoryId === c.categoryId);
-    if (prev && prev.amount > 0 && c.amount >= prev.amount * 1.4 && c.amount - prev.amount >= Math.max(10, incomeRef * 0.03)) {
-      out.push({
-        id: `spike_${c.categoryId}`,
-        kind: "category_spike",
-        severity: "warning",
-        icon: "📈",
-        title: `${c.icon} ${c.name} : ${money(c.amount)} ce mois-ci, contre ${money(prev.amount)} le mois dernier.`,
-        href: "/analyse",
-      });
+  // Unusual category increase (month-to-date vs same period last month)
+  if (dayOfMonth >= 5) {
+    for (const c of s.month.byCategory.slice(0, 5)) {
+      const prev = s.previousMonthToDate.byCategory.find((p) => p.categoryId === c.categoryId);
+      if (prev && prev.amount > 0 && c.amount >= prev.amount * 1.4 && c.amount - prev.amount >= Math.max(10, incomeRef * 0.03)) {
+        out.push({
+          id: `spike_${c.categoryId}`,
+          kind: "category_spike",
+          severity: "warning",
+          icon: "📈",
+          title: `${c.icon} ${c.name} : ${money(c.amount)} ce mois-ci, contre ${money(prev.amount)} à la même date le mois dernier.`,
+          href: "/analyse",
+        });
+      }
     }
   }
 

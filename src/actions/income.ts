@@ -43,7 +43,6 @@ export async function saveSalary(input: unknown): Promise<ActionResult<{ id: str
       if (error) return { ok: false, error: error.message };
       id = data.id;
     }
-    await supabase.from("profiles").update({ onboarding_completed: true }).eq("id", user.id);
     revalidateApp();
     return { ok: true, data: { id } };
   });

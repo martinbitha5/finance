@@ -1,0 +1,86 @@
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
+import { getFinanceData } from "@/services/finance-data";
+import { syncNotifications } from "@/services/notifications-sync";
+import { BalanceCard } from "@/components/dashboard/balance-card";
+import { DailyAllowanceCard } from "@/components/dashboard/daily-allowance-card";
+import { MonthSummary } from "@/components/dashboard/month-summary";
+import { SpendingBreakdown } from "@/components/dashboard/spending-breakdown";
+import { InsightsList } from "@/components/dashboard/insights-list";
+import { UpcomingCharges } from "@/components/dashboard/upcoming-charges";
+import { TransactionItem } from "@/components/transactions/transaction-item";
+import { PageHeader } from "@/components/layout/page-header";
+import { CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/primitives";
+import { Button } from "@/components/ui/button";
+import { DemoButton } from "@/components/settings/demo-button";
+
+export default async function HomePage() {
+  const data = (await getFinanceData())!;
+  const { summary: s, snapshot, profile, settings } = data;
+  await syncNotifications(data.userId, s, settings.notifications_enabled);
+
+  const name = profile.display_name?.split(" ")[0] || "";
+  const hasAnyData = snapshot.transactions.length > 0;
+  const categoryById = new Map(snapshot.categories.map((c) => [c.id, c]));
+  const recent = snapshot.transactions.filter((t) => t.date <= s.today).slice(0, 5);
+
+  return (
+    <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5">
+      <div className="lg:col-span-2">
+        <PageHeader title={`Bonjour${name ? ` ${name}` : ""} 👋`} question="Où en sont mes finances ?" unread={data.unreadNotifications} className="pb-0" />
+      </div>
+
+      <BalanceCard s={s} />
+      <DailyAllowanceCard s={s} />
+
+      {!hasAnyData ? (
+        <EmptyState
+          className="lg:col-span-2"
+          icon="✨"
+          title="Commence par une première dépense"
+          description="Ou charge les données de démonstration pour voir MONY en action tout de suite."
+          action={
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button href="/ajouter">Ajouter une dépense</Button>
+              <DemoButton loaded={settings.demo_loaded} variant="secondary" />
+            </div>
+          }
+        />
+      ) : null}
+
+      <MonthSummary s={s} />
+      <SpendingBreakdown data={s.month.byCategory} currency={s.currency} total={s.month.expenses} limit={4} linkTo="/analyse" />
+      <InsightsList insights={s.insights} limit={3} />
+      <UpcomingCharges
+        charges={s.upcomingCharges}
+        currency={s.currency}
+        total={s.remainingCharges}
+        salary={s.salary.configured && s.salary.amount > 0 ? { amount: s.salary.amount, date: s.cycle.nextPayday } : null}
+      />
+
+      {recent.length > 0 ? (
+        <section className="card p-0 overflow-hidden animate-fade-up" style={{ animationDelay: "360ms" }}>
+          <div className="px-5 pt-5">
+            <CardTitle
+              action={
+                <Link href="/transactions" className="inline-flex items-center text-xs font-semibold text-fg-muted hover:text-fg">
+                  Tout voir <ChevronRight className="h-3.5 w-3.5" />
+                </Link>
+              }
+            >
+              Dernières transactions
+            </CardTitle>
+          </div>
+          <ul className="divide-y divide-border">
+            {recent.map((t) => (
+              <li key={t.id}>
+                <TransactionItem tx={t} category={t.category_id ? categoryById.get(t.category_id) : null} currency={s.currency} rates={s.rates} showDate={t.date === s.today ? "Aujourd'hui" : undefined} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+    </div>
+  );
+}
