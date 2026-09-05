@@ -51,7 +51,11 @@ Le service d'e-mail intégré de Supabase est limité à quelques envois par heu
 | Username | le login SMTP affiché sur <https://app.brevo.com/settings/keys/smtp> (forme `xxxx@smtp-brevo.com`) |
 | Password | une **clé SMTP** Brevo (`xsmtpsib-…`), pas une clé API (`xkeysib-…`). À générer sur la même page. Jamais dans le dépôt. |
 
-Modèle « Confirm signup » (Authentication → Emails → Templates) : sujet `Active ton compte MONY`, corps dans [`supabase/templates/confirm-signup.html`](supabase/templates/confirm-signup.html). Il utilise `{{ .ConfirmationURL }}`, qui redirige vers `/auth/callback` puis `/onboarding`.
+**Inscription par code (OTP).** L'utilisateur reçoit un code à 6 chiffres et le saisit dans l'app (`VerifyCodeForm`), qui appelle `verifySignupCode` → `supabase.auth.verifyOtp({ type: "signup" })`. Pas de lien à cliquer, donc pas de dépendance à `Site URL`.
+
+Modèle « Confirm signup » (Authentication → Emails → Templates) : sujet `Ton code MONY : {{ .Token }}`, corps dans [`supabase/templates/confirm-signup.html`](supabase/templates/confirm-signup.html). Le corps doit contenir `{{ .Token }}` ; s'il contient `{{ .ConfirmationURL }}` à la place, l'utilisateur reçoit un lien et le code saisi est refusé. Vérifier aussi Authentication → Providers → Email → « Email OTP Length » = 6 et « Email OTP Expiration » (3600 s par défaut, c'est la durée annoncée dans l'app et l'e-mail).
+
+`/auth/callback` reste en place pour les liens (magic link, récupération de mot de passe).
 
 Pièges connus :
 
@@ -94,7 +98,15 @@ scripts/generate-icons.mjs  génère les icônes PWA et les assets de marque
 
 ## Export
 
-Paramètres → « Exporter mes transactions » génère un CSV (séparateur `;`, BOM UTF-8) côté client depuis le store, via [`src/lib/export-csv.ts`](src/lib/export-csv.ts).
+Deux formats, depuis Paramètres → « Exporter mes données » ou en bas du Rapport du mois :
+
+- **Rapport Excel** (`GET /api/export?scope=month|cycle|quarter|year|all`) : classeur généré côté serveur avec ExcelJS pour l'utilisateur connecté (RLS). Sept feuilles : Synthèse (bandeau de marque + logo, cartes KPI, situation du jour, période, budgets, épargne/dettes, analyse automatique, panneau latéral « où va ton argent »), Transactions (en-tête figé, filtres, pastilles, totaux, taux de change utilisés), Budgets, Objectifs, Dettes, Charges récurrentes, Graphiques (tendance 6 mois, reste mensuel, camembert des catégories). Les graphiques sont de **vrais graphiques Excel** injectés dans le zip OOXML par [`src/lib/report/charts.ts`](src/lib/report/charts.ts). Boîte à outils de mise en forme : [`src/lib/report/xlsx.ts`](src/lib/report/xlsx.ts) ; assemblage : [`src/lib/report/build.ts`](src/lib/report/build.ts). Le logo embarqué (`src/lib/report/logo.ts`) se régénère avec :
+
+  ```bash
+  node -e "const fs=require('fs');const b=fs.readFileSync('public/icons/icon-192.png').toString('base64');fs.writeFileSync('src/lib/report/logo.ts','export const LOGO_MONY = { width: 192, height: 192, b64: \'' + b + '\' } as const;\n')"
+  ```
+
+- **CSV brut** (séparateur `;`, BOM UTF-8), généré côté client depuis le store via [`src/lib/export-csv.ts`](src/lib/export-csv.ts).
 
 ## Installer sur téléphone
 

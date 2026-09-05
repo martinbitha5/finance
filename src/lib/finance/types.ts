@@ -125,6 +125,19 @@ export interface UpcomingCharge {
   icon: string;
   color: string;
   categoryName: string | null;
+  /** Falls before the next payday: it is reserved out of the money available today. */
+  beforePayday: boolean;
+}
+
+/** One recurring expense, normalised to a monthly cost in the display currency. */
+export interface RecurringLoad {
+  id: string;
+  name: string;
+  monthly: number;
+  nextDate: string;
+  icon: string;
+  color: string;
+  categoryName: string | null;
 }
 
 export interface BalancePoint {
@@ -166,8 +179,12 @@ export interface FinanceSummary {
   /** Real cash balance now (accounts + income − expenses − savings). */
   balance: number;
   balanceAtCycleStart: number;
+  /** Next occurrences of every active recurring charge over the coming 31 days, payday included. */
   upcomingCharges: UpcomingCharge[];
+  /** Sum of the upcoming charges that fall before the next payday. */
   remainingCharges: number;
+  /** Fixed charges as a monthly load, whatever their next due date. */
+  recurring: { monthlyTotal: number; activeCount: number; shareOfSalary: number | null; items: RecurringLoad[] };
   plannedSavings: number;
   remainingSavings: number;
   /** Debt repayments planned this cycle and not yet paid. */

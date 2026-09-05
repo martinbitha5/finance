@@ -81,6 +81,21 @@ export function advance(from: Date, frequency: Frequency, dayOfMonth: number | n
   }
 }
 
+/** Average monthly cost of a recurring amount (30.44 days / 4.35 weeks per month). */
+export function monthlyEquivalent(amount: number, frequency: Frequency): number {
+  switch (frequency) {
+    case "daily":
+      return amount * 30.44;
+    case "weekly":
+      return amount * 4.35;
+    case "yearly":
+      return amount / 12;
+    case "monthly":
+    default:
+      return amount;
+  }
+}
+
 /** All occurrences of a recurring item within [rangeStart, rangeEnd), starting at `nextDate`. */
 export function occurrencesInRange(
   nextDate: string,

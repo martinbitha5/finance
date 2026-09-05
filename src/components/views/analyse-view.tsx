@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { useFinanceData } from "@/components/finance/finance-provider";
 import { PageHeader } from "@/components/layout/page-header";
 import { SpendingBreakdown } from "@/components/dashboard/spending-breakdown";
@@ -8,7 +10,7 @@ import { DailyAllowanceCard } from "@/components/dashboard/daily-allowance-card"
 import { DailyBars, TrendBars } from "@/components/charts/trend-bars";
 import { CardTitle } from "@/components/ui/card";
 import { Stat } from "@/components/ui/primitives";
-import { formatMoney, formatPercent } from "@/lib/format";
+import { formatDate, formatMoney, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export function AnalyseView() {
@@ -27,6 +29,53 @@ export function AnalyseView() {
       <div className="lg:col-span-2">
         <SpendingBreakdown data={s.month.byCategory} currency={cur} total={s.month.expenses} title={`Où va ton argent ? · ${s.month.label}`} />
       </div>
+
+      <section className="card p-5">
+        <CardTitle
+          action={
+            <Link href="/recurrents" className="inline-flex items-center text-xs font-semibold text-fg-muted hover:text-fg">
+              Gérer <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          }
+        >
+          Tes charges fixes
+        </CardTitle>
+        {s.recurring.activeCount === 0 ? (
+          <p className="text-sm text-fg-muted">
+            Aucune charge récurrente.{" "}
+            <Link href="/recurrents" className="font-semibold text-fg underline underline-offset-4">
+              Ajouter loyer, internet, abonnements…
+            </Link>
+          </p>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-2.5">
+              <Stat label="Par mois" value={formatMoney(s.recurring.monthlyTotal, cur)} sub={`${s.recurring.activeCount} charge${s.recurring.activeCount > 1 ? "s" : ""} active${s.recurring.activeCount > 1 ? "s" : ""}`} />
+              <Stat
+                label="Part du salaire"
+                value={s.recurring.shareOfSalary === null ? "—" : formatPercent(s.recurring.shareOfSalary)}
+                tone={s.recurring.shareOfSalary === null ? undefined : s.recurring.shareOfSalary >= 50 ? "negative" : s.recurring.shareOfSalary >= 30 ? "warning" : "positive"}
+                sub={s.recurring.shareOfSalary === null ? "configure ton salaire" : "chaque mois"}
+              />
+            </div>
+            <ul className="mt-4 flex flex-col gap-2.5">
+              {s.recurring.items.slice(0, 5).map((r) => (
+                <li key={r.id} className="flex items-center gap-3 text-sm">
+                  <span className="w-7 text-center text-lg" aria-hidden>{r.icon}</span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block font-semibold truncate">{r.name}</span>
+                    <span className="block text-xs text-fg-subtle">
+                      prochain prélèvement le {formatDate(r.nextDate, r.nextDate.slice(0, 4) === s.today.slice(0, 4) ? "d MMM" : "d MMM yyyy")}
+                    </span>
+                  </span>
+                  <span className="tabular font-bold">{formatMoney(r.monthly, cur)}<span className="text-xs font-normal text-fg-subtle">/mois</span></span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-[11px] text-fg-subtle mt-3">Une charge apparaît dans « Où va ton argent » le jour où elle est prélevée.</p>
+          </>
+        )}
+      </section>
 
       {s.month.byCategory.length > 0 && incomeRef > 0 ? (
         <section className="card p-5">

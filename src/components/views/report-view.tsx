@@ -8,6 +8,7 @@ import { CardTitle } from "@/components/ui/card";
 import { Stat, IconBubble } from "@/components/ui/primitives";
 import { formatMoney, formatPercent, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { ExportPanel } from "@/components/settings/export-panel";
 
 export function ReportView() {
   const { summary: s, snapshot } = useFinanceData();
@@ -105,6 +106,8 @@ export function ReportView() {
         <CardTitle>Évolution mensuelle</CardTitle>
         <TrendBars data={s.monthlyTrend} currency={cur} />
       </section>
+
+      <ExportPanel transactions={snapshot.transactions} categories={snapshot.categories} goals={snapshot.goals} debts={snapshot.debts} defaultScope="month" compact />
     </div>
   );
 }

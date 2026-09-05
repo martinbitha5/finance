@@ -12,14 +12,15 @@ import type {
   FinanceSummary,
   GoalStatus,
   PeriodStats,
+  RecurringLoad,
   Transaction,
   UpcomingCharge,
 } from "./types";
-import { getPayCycle, inRange, monthRange, occurrencesInRange } from "./cycles";
+import { getPayCycle, inRange, monthRange, monthlyEquivalent, occurrencesInRange } from "./cycles";
 import { convert } from "./currency";
 import { buildInsights } from "./insights";
 import { computeDebts } from "./debts";
-import { formatMonth, toISODate } from "@/lib/format";
+import { formatDate, formatMonth, toISODate } from "@/lib/format";
 import { round2, sum } from "@/lib/utils";
 
 type Tx = Transaction & { base: number };
@@ -68,16 +69,19 @@ export function computeFinance(s: FinanceSnapshot): FinanceSummary {
   const discretionaryExpenses = cycleExpenses - recurringPaid;
   const cycleSavings = sum(cycleTx.filter((t) => t.type === "saving").map((t) => t.base));
 
-  // ---------- Upcoming recurring charges (not yet posted) until next payday ----------
+  // ---------- Upcoming recurring charges (not yet posted) ----------
+  // Listed over the coming 31 days so a charge due on payday (or just after) is still visible;
+  // only the ones before the next payday are reserved out of today's available money.
   const postedRecurringKeys = new Set(
     all.filter((t) => t.recurring_expense_id).map((t) => `${t.recurring_expense_id}:${t.date}`),
   );
+  const upcomingEnd = toISODate(addDays(s.today, 31));
   const upcomingCharges: UpcomingCharge[] = [];
   for (const r of s.recurring) {
     if (!r.is_active) continue;
     const dates = occurrencesInRange(r.next_date, r.frequency, r.day_of_month, {
       start: r.next_date < todayISO ? r.next_date : todayISO,
-      end: cycle.end,
+      end: upcomingEnd > cycle.end ? upcomingEnd : cycle.end,
     });
     const cat = r.category_id ? categoryById.get(r.category_id) : undefined;
     for (const d of dates) {
@@ -90,11 +94,30 @@ export function computeFinance(s: FinanceSnapshot): FinanceSummary {
         icon: cat?.icon ?? "🔁",
         color: cat?.color ?? "#94A3B8",
         categoryName: cat?.name ?? null,
+        beforePayday: d < cycle.end,
       });
     }
   }
   upcomingCharges.sort((a, b) => a.date.localeCompare(b.date));
-  const remainingCharges = round2(sum(upcomingCharges.map((c) => c.amount)));
+  const remainingCharges = round2(sum(upcomingCharges.filter((c) => c.beforePayday).map((c) => c.amount)));
+
+  // Fixed charges as a monthly load, independent of when the next one is due.
+  const recurringItems: RecurringLoad[] = s.recurring
+    .filter((r) => r.is_active)
+    .map((r) => {
+      const cat = r.category_id ? categoryById.get(r.category_id) : undefined;
+      return {
+        id: r.id,
+        name: r.name,
+        monthly: round2(monthlyEquivalent(conv(r.amount, r.currency), r.frequency)),
+        nextDate: r.next_date,
+        icon: cat?.icon ?? "🔁",
+        color: cat?.color ?? "#94A3B8",
+        categoryName: cat?.name ?? null,
+      };
+    })
+    .sort((a, b) => b.monthly - a.monthly);
+  const recurringMonthlyTotal = round2(sum(recurringItems.map((r) => r.monthly)));
   // Total recurring load for a whole cycle (for the initial daily budget).
   const cycleRecurringTotal = sum(
     s.recurring
@@ -234,7 +257,11 @@ export function computeFinance(s: FinanceSnapshot): FinanceSummary {
     const tx = posted.filter((t) => inRange(t.date, r));
     return {
       key: r.start.slice(0, 7),
-      label: formatMonth(ref).slice(0, 3),
+      // "Juin", "Juil.", "Août" : sans ambiguïté entre juin et juillet.
+      label: (() => {
+        const short = formatDate(toISODate(ref), "MMM");
+        return short.charAt(0).toUpperCase() + short.slice(1);
+      })(),
       income: round2(sum(tx.filter((t) => t.type === "income").map((t) => t.base))),
       expenses: round2(sum(tx.filter((t) => t.type === "expense").map((t) => t.base))),
       savings: round2(sum(tx.filter((t) => t.type === "saving").map((t) => t.base))),
@@ -266,6 +293,15 @@ export function computeFinance(s: FinanceSnapshot): FinanceSummary {
     balanceAtCycleStart,
     upcomingCharges,
     remainingCharges,
+    recurring: {
+      monthlyTotal: recurringMonthlyTotal,
+      activeCount: recurringItems.length,
+      shareOfSalary:
+        salarySource && conv(salarySource.amount, salarySource.currency) > 0
+          ? round2((recurringMonthlyTotal / conv(salarySource.amount, salarySource.currency)) * 100)
+          : null,
+      items: recurringItems,
+    },
     plannedSavings,
     remainingSavings,
     remainingDebtPayments,

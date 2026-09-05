@@ -8,6 +8,7 @@ import { signIn, signUp } from "@/actions/auth";
 import { useAction } from "@/hooks/use-action";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
+import { VerifyCodeForm } from "./verify-code-form";
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
@@ -37,18 +38,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const fields = mode === "login" ? login.fields : register.fields;
 
   if (sent) {
-    return (
-      <div className="card p-6 text-center animate-pop">
-        <div className="text-4xl mb-3">📬</div>
-        <h2 className="font-bold text-lg">Vérifie ta boîte mail</h2>
-        <p className="text-fg-muted text-sm mt-2">
-          Nous t&apos;avons envoyé un lien de confirmation à <b>{form.email}</b>. Clique dessus pour activer ton compte.
-        </p>
-        <Button href="/login" variant="secondary" className="mt-5" full>
-          Retour à la connexion
-        </Button>
-      </div>
-    );
+    return <VerifyCodeForm email={form.email.trim()} onBack={() => setSent(false)} />;
   }
 
   return (

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { signInSchema, signUpSchema } from "@/lib/validation/schemas";
+import { emailSchema, signInSchema, signUpSchema, verifyCodeSchema } from "@/lib/validation/schemas";
 import { parseInput, type ActionResult } from "./_helpers";
 
 async function siteUrl() {
@@ -40,6 +40,37 @@ export async function signUp(input: unknown): Promise<ActionResult<{ needsConfir
     return { ok: false, error: error.message };
   }
   return { ok: true, data: { needsConfirmation: !data.session } };
+}
+
+/** Checks the 6-digit code received by email after sign-up and opens the session. */
+export async function verifySignupCode(input: unknown): Promise<ActionResult<{ redirectTo: string }>> {
+  const parsed = parseInput(verifyCodeSchema, input);
+  if (!parsed.ok) return parsed;
+  const supabase = await createClient();
+  const { error } = await supabase.auth.verifyOtp({ email: parsed.data.email, token: parsed.data.code, type: "signup" });
+  if (error) {
+    const m = error.message.toLowerCase();
+    if (m.includes("expired") || m.includes("invalid")) {
+      return { ok: false, error: "Code incorrect ou expiré.", fields: { code: "Code incorrect ou expiré" } };
+    }
+    return { ok: false, error: error.message };
+  }
+  return { ok: true, data: { redirectTo: "/onboarding" } };
+}
+
+/** Sends a fresh sign-up code to the same address. */
+export async function resendSignupCode(input: unknown): Promise<ActionResult<null>> {
+  const parsed = parseInput(emailSchema, input);
+  if (!parsed.ok) return parsed;
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({ type: "signup", email: parsed.data.email });
+  if (error) {
+    if (error.message.toLowerCase().includes("rate limit") || error.status === 429) {
+      return { ok: false, error: "Trop de demandes. Réessaie dans une minute." };
+    }
+    return { ok: false, error: error.message };
+  }
+  return { ok: true, data: null };
 }
 
 export async function signOut() {

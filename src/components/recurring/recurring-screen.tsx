@@ -6,6 +6,7 @@ import type { Category, RecurringExpense } from "@/lib/finance/types";
 import { CURRENCIES, FREQUENCIES, PAYMENT_METHODS, type Currency, type Frequency, type PaymentMethod } from "@/lib/constants";
 import { formatMoney, formatDate } from "@/lib/format";
 import { convert } from "@/lib/finance/currency";
+import { monthlyEquivalent } from "@/lib/finance/cycles";
 import { createRecurring, deleteRecurring, toggleRecurring, updateRecurring } from "@/actions/recurring";
 import { useAction } from "@/hooks/use-action";
 import { Sheet, ConfirmSheet } from "@/components/ui/sheet";
@@ -22,10 +23,7 @@ export function RecurringScreen({ items, categories, currency, rates, today }: {
   const toggle = useAction(({ id, v }: { id: string; v: boolean }) => toggleRecurring(id, v), {});
   const catById = new Map(categories.map((c) => [c.id, c]));
 
-  const monthly = (r: RecurringExpense) => {
-    const base = convert(r.amount, r.currency, currency, rates);
-    return r.frequency === "daily" ? base * 30.44 : r.frequency === "weekly" ? base * 4.35 : r.frequency === "yearly" ? base / 12 : base;
-  };
+  const monthly = (r: RecurringExpense) => monthlyEquivalent(convert(r.amount, r.currency, currency, rates), r.frequency);
   const totalMonthly = items.filter((r) => r.is_active).reduce((a, r) => a + monthly(r), 0);
 
   return (

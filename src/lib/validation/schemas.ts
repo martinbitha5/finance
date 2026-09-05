@@ -149,6 +149,15 @@ export const signUpSchema = signInSchema.extend({
   display_name: z.string().trim().min(1, "Prénom requis").max(60),
 });
 
+export const emailSchema = z.object({ email: z.string().trim().email("Email invalide") });
+
+export const verifyCodeSchema = emailSchema.extend({
+  code: z
+    .string()
+    .transform((v) => v.replace(/\D/g, ""))
+    .pipe(z.string().length(6, "Le code contient 6 chiffres")),
+});
+
 /** Turns a zod error into a { field: message } record for forms. */
 export function fieldErrors(err: z.ZodError): Record<string, string> {
   const out: Record<string, string> = {};

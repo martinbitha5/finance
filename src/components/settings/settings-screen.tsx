@@ -2,15 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { LogOut, Download, ChevronRight, Tags } from "lucide-react";
-import { toast } from "sonner";
+import { LogOut, ChevronRight, Tags } from "lucide-react";
 import type { Category, Debt, Profile, SavingsGoal, Settings, Transaction } from "@/lib/finance/types";
 import { CURRENCIES, type Currency } from "@/lib/constants";
 import { normalizeRates, describeRate } from "@/lib/finance/currency";
 import { saveSettings } from "@/actions/settings";
 import { signOut } from "@/actions/auth";
 import { useAction } from "@/hooks/use-action";
-import { transactionsToCsv, downloadText } from "@/lib/export-csv";
+import { ExportPanel } from "./export-panel";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Toggle } from "@/components/ui/primitives";
@@ -43,13 +42,6 @@ export function SettingsScreen({
   const [eur, setEur] = useState(String(rates.EUR));
   const [gbp, setGbp] = useState(String(rates.GBP));
   const save = useAction(saveSettings, { success: "Paramètres enregistrés" });
-
-  function exportCsv() {
-    if (transactions.length === 0) return toast.error("Aucune transaction à exporter.");
-    const csv = transactionsToCsv(transactions, categories, goals, debts);
-    downloadText(`mony-transactions-${new Date().toISOString().slice(0, 10)}.csv`, csv);
-    toast.success(`${transactions.length} transactions exportées`);
-  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -129,13 +121,7 @@ export function SettingsScreen({
         <ChevronRight className="h-4 w-4 text-fg-subtle" />
       </Link>
 
-      <section className="card p-5">
-        <CardTitle>Mes données</CardTitle>
-        <p className="text-sm text-fg-muted mb-3">Télécharge toutes tes transactions dans un fichier CSV lisible par Excel, Numbers ou Google Sheets.</p>
-        <Button variant="secondary" full onClick={exportCsv}>
-          <Download className="h-4 w-4" /> Exporter mes transactions ({transactions.length})
-        </Button>
-      </section>
+      <ExportPanel transactions={transactions} categories={categories} goals={goals} debts={debts} />
 
       <section className="card p-5">
         <CardTitle>Installer l&apos;application</CardTitle>
