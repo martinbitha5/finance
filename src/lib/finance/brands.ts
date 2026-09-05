@@ -8,7 +8,7 @@
  */
 
 import type { LucideIcon } from "lucide-react";
-import { Banknote, Bus, Car, Droplets, Dumbbell, Fuel, GraduationCap, Home, Landmark, Shield, ShoppingCart, Smartphone, Stethoscope, Wifi, Zap } from "lucide-react";
+import { Banknote, Bus, Car, ChartCandlestick, Droplets, Dumbbell, Fuel, GraduationCap, Home, Landmark, Shield, ShoppingCart, Smartphone, Stethoscope, Wifi, Zap } from "lucide-react";
 
 export interface Brand {
   /** Domaine dont on récupère le favicon officiel (marques uniquement). */
@@ -39,6 +39,7 @@ const GENERICS: Array<Brand & { keys: string[] }> = [
   { keys: ["gym", "sport", "fitness", "salle de sport", "muscu"], icon: Dumbbell, color: "#EF4444" },
   { keys: ["ecole", "scolaire", "universite", "etudes", "formation", "cours"], icon: GraduationCap, color: "#6366F1" },
   { keys: ["banque", "frais bancaires", "compte"], icon: Landmark, color: "#0F766E" },
+  { keys: ["trading", "trade", "forex", "bourse", "crypto", "cryptomonnaie", "investissement", "actions"], icon: ChartCandlestick, color: "#16A34A" },
 ];
 
 /** Les clés sont en forme normalisée : minuscules, sans accents, mots séparés par des espaces. */
@@ -104,6 +105,17 @@ const BRANDS: Array<Brand & { keys: string[] }> = [
   { keys: ["nintendo"], domain: "nintendo.com", color: "#E60012" },
   { keys: ["steam"], domain: "steampowered.com", color: "#171A21" },
   { keys: ["epic games"], domain: "epicgames.com", color: "#444444" },
+
+  // Trading & investissement
+  { keys: ["binance"], domain: "binance.com", color: "#F0B90B" },
+  { keys: ["coinbase"], domain: "coinbase.com", color: "#0052FF" },
+  { keys: ["bybit"], domain: "bybit.com", color: "#F7A600" },
+  { keys: ["kraken"], domain: "kraken.com", color: "#5741D9" },
+  { keys: ["etoro"], domain: "etoro.com", color: "#13C636" },
+  { keys: ["deriv"], domain: "deriv.com", color: "#FF444F" },
+  { keys: ["exness"], domain: "exness.com", color: "#FFCF01" },
+  { keys: ["tradingview"], domain: "tradingview.com", color: "#2962FF" },
+  { keys: ["metatrader", "mt4", "mt5"], domain: "metatrader5.com", color: "#F5A623" },
 
   // Transport & divers
   { keys: ["uber"], domain: "uber.com", color: "#111111" },
