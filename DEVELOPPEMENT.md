@@ -92,7 +92,7 @@ scripts/generate-icons.mjs  génère les icônes PWA et les assets de marque
 - **Montant quotidien** = argent libre ÷ jours restants avant la paie. Jamais arbitraire.
 - **Projection** = argent libre − rythme moyen quotidien (hors charges fixes) × jours restants.
 - **Budgets** et **rapport** : mois calendaire. Comparaisons « vs mois dernier » faites à date comparable.
-- Les **charges récurrentes** génèrent automatiquement la dépense à chaque échéance.
+- Les **charges récurrentes** génèrent automatiquement la dépense à chaque échéance. Une charge hebdomadaire peut viser plusieurs jours (`recurring_expenses.weekdays`, ISO 1 = lundi … 7 = dimanche, ex. transport du lundi au samedi) : une dépense est créée pour chaque jour sélectionné, le calendrier et « À venir » les listent, et l'équivalent mensuel vaut montant × jours × 4,35. Sans sélection, la charge tombe une fois par semaine, le jour de la date de départ. Logique dans [`src/lib/finance/cycles.ts`](src/lib/finance/cycles.ts) (`advance`, `occurrencesInRange`, `alignToWeekdays`).
 - **Dettes** (`debts`) : ce que je dois (`owed`) et ce qu'on me doit (`lent`). Les remboursements sont des transactions liées (`transactions.debt_id`) ; la dette passe « liquidée » quand ils atteignent le capital. La mensualité prévue non encore payée dans le cycle est retirée de l'argent libre. Pour chaque dette : restant, % remboursé, jours/mois avant l'échéance, mensualité requise pour tenir la date, date de liquidation estimée au rythme prévu.
 - **Multi-devises** : les montants sont stockés dans leur devise ; l'affichage convertit avec les taux définis dans Paramètres et affiche toujours le taux utilisé.
 

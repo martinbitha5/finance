@@ -79,10 +79,16 @@ export function computeFinance(s: FinanceSnapshot): FinanceSummary {
   const upcomingCharges: UpcomingCharge[] = [];
   for (const r of s.recurring) {
     if (!r.is_active) continue;
-    const dates = occurrencesInRange(r.next_date, r.frequency, r.day_of_month, {
-      start: r.next_date < todayISO ? r.next_date : todayISO,
-      end: upcomingEnd > cycle.end ? upcomingEnd : cycle.end,
-    });
+    const dates = occurrencesInRange(
+      r.next_date,
+      r.frequency,
+      r.day_of_month,
+      {
+        start: r.next_date < todayISO ? r.next_date : todayISO,
+        end: upcomingEnd > cycle.end ? upcomingEnd : cycle.end,
+      },
+      r.weekdays,
+    );
     const cat = r.category_id ? categoryById.get(r.category_id) : undefined;
     for (const d of dates) {
       if (postedRecurringKeys.has(`${r.id}:${d}`)) continue;
@@ -109,7 +115,7 @@ export function computeFinance(s: FinanceSnapshot): FinanceSummary {
       return {
         id: r.id,
         name: r.name,
-        monthly: round2(monthlyEquivalent(conv(r.amount, r.currency), r.frequency)),
+        monthly: round2(monthlyEquivalent(conv(r.amount, r.currency), r.frequency, r.weekdays)),
         nextDate: r.next_date,
         icon: cat?.icon ?? "🔁",
         color: cat?.color ?? "#94A3B8",
@@ -123,7 +129,7 @@ export function computeFinance(s: FinanceSnapshot): FinanceSummary {
     s.recurring
       .filter((r) => r.is_active)
       .flatMap((r) =>
-        occurrencesInRange(r.next_date < cycle.start ? cycle.start : r.next_date, r.frequency, r.day_of_month, cycleRange).map(() =>
+        occurrencesInRange(r.next_date < cycle.start ? cycle.start : r.next_date, r.frequency, r.day_of_month, cycleRange, r.weekdays).map(() =>
           conv(r.amount, r.currency),
         ),
       ),

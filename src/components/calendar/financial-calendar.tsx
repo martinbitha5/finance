@@ -70,7 +70,7 @@ export function FinancialCalendar({
     for (const r of recurring) {
       if (!r.is_active) continue;
       const cat = r.category_id ? catById.get(r.category_id) : undefined;
-      for (const d of occurrencesInRange(r.next_date, r.frequency, r.day_of_month, { start: r.next_date > start ? r.next_date : start, end })) {
+      for (const d of occurrencesInRange(r.next_date, r.frequency, r.day_of_month, { start: r.next_date > start ? r.next_date : start, end }, r.weekdays)) {
         if (d < today || postedRecurring.has(`${r.id}:${d}`)) continue;
         out.push({ id: `${r.id}:${d}`, date: d, icon: cat?.icon ?? "🔁", color: cat?.color ?? "#94A3B8", label: r.name, amount: -convert(r.amount, r.currency, currency, rates), kind: "recurring", planned: true });
       }

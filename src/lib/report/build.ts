@@ -9,6 +9,7 @@ import { round2, sum } from "@/lib/utils";
 import { LOGO_MONY } from "./logo";
 import { transactionsToCsv } from "@/lib/export-csv";
 import { injectNativeCharts, type ChartSpec } from "./charts";
+import { describeWeekdays, monthlyEquivalent } from "@/lib/finance/cycles";
 import {
   addSheet,
   FMT_DATE,
@@ -426,10 +427,7 @@ export async function buildFinanceWorkbook(raw: FinanceRaw, today: Date, scope: 
   // ═══════════════════ FEUILLE 6 — CHARGES RÉCURRENTES ═══════════════════
   {
     const ws = addSheet(wb, "Charges récurrentes", "info");
-    const monthly = (r: FinanceRaw["recurring"][number]) => {
-      const b = conv(r.amount, r.currency);
-      return r.frequency === "daily" ? b * 30.44 : r.frequency === "weekly" ? b * 4.35 : r.frequency === "yearly" ? b / 12 : b;
-    };
+    const monthly = (r: FinanceRaw["recurring"][number]) => monthlyEquivalent(conv(r.amount, r.currency), r.frequency, r.weekdays);
     const totalMonthly = round2(sum(raw.recurring.filter((r) => r.is_active).map(monthly)));
     const hr = titleBand(ws, { title: "Charges récurrentes", subtitle: `Charge mensuelle équivalente : ${totalMonthly.toLocaleString("fr-FR")} ${cur}`, meta: [] }, 7);
     const rows: Cell[][] = raw.recurring.map((rc) => {
@@ -437,7 +435,7 @@ export async function buildFinanceWorkbook(raw: FinanceRaw, today: Date, scope: 
       return [
         rc.name,
         { value: rc.amount, numFmt: moneyFmt(rc.currency) },
-        FREQUENCIES.find((f) => f.value === rc.frequency)?.label ?? rc.frequency,
+        rc.frequency === "weekly" && rc.weekdays?.length ? `Chaque semaine · ${describeWeekdays(rc.weekdays)}` : (FREQUENCIES.find((f) => f.value === rc.frequency)?.label ?? rc.frequency),
         { value: round2(monthly(rc)), numFmt: money },
         xlDate(rc.next_date),
         cat ? `${cat.icon} ${cat.name}` : "—",

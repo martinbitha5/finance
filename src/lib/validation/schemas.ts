@@ -85,6 +85,10 @@ export const recurringSchema = z.object({
   next_date: isoDate,
   payment_method: paymentMethodSchema.default("card"),
   is_active: z.coerce.boolean().default(true),
+  /** Jours de la semaine (ISO 1 = lundi … 7 = dimanche), pour la fréquence hebdomadaire. */
+  weekdays: z
+    .preprocess((v) => (v == null || v === "" ? null : v), z.array(z.coerce.number().int().min(1).max(7)).max(7).nullable())
+    .default(null),
 });
 export type RecurringInput = z.infer<typeof recurringSchema>;
 

@@ -6,7 +6,7 @@ import type { Category, RecurringExpense } from "@/lib/finance/types";
 import { CURRENCIES, FREQUENCIES, PAYMENT_METHODS, type Currency, type Frequency, type PaymentMethod } from "@/lib/constants";
 import { formatMoney, formatDate } from "@/lib/format";
 import { convert } from "@/lib/finance/currency";
-import { monthlyEquivalent } from "@/lib/finance/cycles";
+import { monthlyEquivalent, describeWeekdays, WEEKDAYS } from "@/lib/finance/cycles";
 import { createRecurring, deleteRecurring, toggleRecurring, updateRecurring } from "@/actions/recurring";
 import { useAction } from "@/hooks/use-action";
 import { Sheet, ConfirmSheet } from "@/components/ui/sheet";
@@ -23,7 +23,7 @@ export function RecurringScreen({ items, categories, currency, rates, today }: {
   const toggle = useAction(({ id, v }: { id: string; v: boolean }) => toggleRecurring(id, v), {});
   const catById = new Map(categories.map((c) => [c.id, c]));
 
-  const monthly = (r: RecurringExpense) => monthlyEquivalent(convert(r.amount, r.currency, currency, rates), r.frequency);
+  const monthly = (r: RecurringExpense) => monthlyEquivalent(convert(r.amount, r.currency, currency, rates), r.frequency, r.weekdays);
   const totalMonthly = items.filter((r) => r.is_active).reduce((a, r) => a + monthly(r), 0);
 
   return (
@@ -52,8 +52,10 @@ export function RecurringScreen({ items, categories, currency, rates, today }: {
                 <button type="button" className="flex-1 min-w-0 text-left" onClick={() => setEditing(r)}>
                   <div className="font-semibold truncate">{r.name}</div>
                   <div className="text-xs text-fg-muted">
-                    {formatMoney(r.amount, r.currency)} / {FREQUENCIES.find((f) => f.value === r.frequency)?.short}
-                    {r.is_active ? ` · prochain le ${formatDate(r.next_date, "d MMM")}` : " · en pause"}
+                    {formatMoney(r.amount, r.currency)}
+                    {r.frequency === "weekly" && r.weekdays?.length ? ` × ${describeWeekdays(r.weekdays)}` : ` / ${FREQUENCIES.find((f) => f.value === r.frequency)?.short}`}
+                    {r.frequency !== "monthly" ? ` · ≈ ${formatMoney(monthly(r), currency)}/mois` : ""}
+                    {r.is_active ? ` · prochain le ${formatDate(r.next_date, "EEE d MMM")}` : " · en pause"}
                   </div>
                 </button>
                 <Toggle checked={r.is_active} onChange={(v) => toggle.execute({ id: r.id, v })} label={`Activer ${r.name}`} />
@@ -83,6 +85,11 @@ function RecurringForm({ categories, currency, today, initial, onDone }: { categ
   const [frequency, setFrequency] = useState<Frequency>(initial?.frequency ?? "monthly");
   const [nextDate, setNextDate] = useState(initial?.next_date ?? today);
   const [method, setMethod] = useState<PaymentMethod>(initial?.payment_method ?? "card");
+  // Jours de la semaine pour une charge hebdomadaire (ex. transport du lundi au samedi).
+  const [weekdays, setWeekdays] = useState<number[]>(initial?.weekdays ?? [1, 2, 3, 4, 5, 6]);
+  const toggleDay = (d: number) => setWeekdays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort((a, b) => a - b)));
+  const amountNum = Number(amount) || 0;
+  const weeklyMonthly = frequency === "weekly" ? monthlyEquivalent(amountNum, "weekly", weekdays.length ? weekdays : null) : 0;
   const create = useAction(createRecurring, { success: "Charge ajoutée", onSuccess: onDone });
   const update = useAction((input: unknown) => updateRecurring(initial!.id, input), { success: "Charge modifiée", onSuccess: onDone });
   const pending = create.pending || update.pending;
@@ -92,7 +99,17 @@ function RecurringForm({ categories, currency, today, initial, onDone }: { categ
       className="flex flex-col gap-4"
       onSubmit={(e) => {
         e.preventDefault();
-        const payload = { name, amount, currency: cur, category_id: categoryId || null, frequency, next_date: nextDate, payment_method: method, is_active: initial?.is_active ?? true };
+        const payload = {
+          name,
+          amount,
+          currency: cur,
+          category_id: categoryId || null,
+          frequency,
+          next_date: nextDate,
+          payment_method: method,
+          is_active: initial?.is_active ?? true,
+          weekdays: frequency === "weekly" && weekdays.length ? weekdays : null,
+        };
         if (initial) update.execute(payload);
         else create.execute(payload);
       }}
@@ -121,10 +138,59 @@ function RecurringForm({ categories, currency, today, initial, onDone }: { categ
             {FREQUENCIES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
           </Select>
         </Field>
-        <Field label="Prochain paiement" error={fields.next_date}>
+        <Field label={frequency === "weekly" ? "À partir du" : "Prochain paiement"} error={fields.next_date}>
           <Input type="date" value={nextDate} onChange={(e) => setNextDate(e.target.value)} />
         </Field>
       </div>
+      {frequency === "weekly" ? (
+        <Field label="Jours concernés" error={fields.weekdays} hint={weekdays.length === 0 ? "Aucun jour : une fois par semaine, le jour de la date choisie." : undefined}>
+          <div className="flex gap-1.5" role="group" aria-label="Jours de la semaine">
+            {WEEKDAYS.map((d) => {
+              const active = weekdays.includes(d.value);
+              return (
+                <button
+                  key={d.value}
+                  type="button"
+                  onClick={() => toggleDay(d.value)}
+                  aria-pressed={active}
+                  aria-label={d.label}
+                  title={d.label}
+                  className={cn(
+                    "h-10 flex-1 rounded-xl text-sm font-bold press transition-colors border",
+                    active ? "bg-ink text-ink-fg border-ink dark:bg-fg dark:text-bg dark:border-fg" : "bg-surface-2 border-transparent text-fg-muted hover:text-fg",
+                  )}
+                >
+                  {d.short}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {[
+              { label: "Lun. → Ven.", days: [1, 2, 3, 4, 5] },
+              { label: "Lun. → Sam.", days: [1, 2, 3, 4, 5, 6] },
+              { label: "Tous les jours", days: [1, 2, 3, 4, 5, 6, 7] },
+            ].map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                onClick={() => setWeekdays(p.days)}
+                className={cn(
+                  "h-7 px-2.5 rounded-full text-[11px] font-semibold press border",
+                  JSON.stringify(weekdays) === JSON.stringify(p.days) ? "bg-accent/20 border-accent text-fg" : "bg-surface border-border text-fg-muted hover:text-fg",
+                )}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          {weekdays.length > 0 && amountNum > 0 ? (
+            <p className="mt-2 text-xs text-fg-muted">
+              {formatMoney(amountNum, cur)} × {weekdays.length} jour{weekdays.length > 1 ? "s" : ""} par semaine ({describeWeekdays(weekdays)}) ≈ <b className="text-fg tabular">{formatMoney(weeklyMonthly, cur)}</b> par mois.
+            </p>
+          ) : null}
+        </Field>
+      ) : null}
       <Field label="Moyen de paiement">
         <Select value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)}>
           {PAYMENT_METHODS.map((m) => <option key={m.value} value={m.value}>{m.icon} {m.label}</option>)}

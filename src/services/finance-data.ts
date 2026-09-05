@@ -154,7 +154,7 @@ async function postDueRecurringExpenses(
           is_demo: r.is_demo,
         });
       }
-      cursor = advance(cursor, r.frequency, r.day_of_month);
+      cursor = advance(cursor, r.frequency, r.day_of_month, r.weekdays);
     }
     nextDates.push({ id: r.id, next_date: toISODate(cursor) });
   }

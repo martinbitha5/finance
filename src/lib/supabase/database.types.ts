@@ -318,6 +318,7 @@ export type Database = {
           payment_method: Database["public"]["Enums"]["payment_method"];
           updated_at: string;
           user_id: string;
+          weekdays: number[] | null;
         };
         Insert: {
           amount: number;
@@ -334,6 +335,7 @@ export type Database = {
           payment_method?: Database["public"]["Enums"]["payment_method"];
           updated_at?: string;
           user_id: string;
+          weekdays?: number[] | null;
         };
         Update: {
           amount?: number;
@@ -350,6 +352,7 @@ export type Database = {
           payment_method?: Database["public"]["Enums"]["payment_method"];
           updated_at?: string;
           user_id?: string;
+          weekdays?: number[] | null;
         };
         Relationships: [
           {
