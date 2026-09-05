@@ -1,15 +1,8 @@
-import { getFinanceData } from "@/services/finance-data";
-import { PageHeader } from "@/components/layout/page-header";
-import { SettingsScreen } from "@/components/settings/settings-screen";
+import { SettingsView } from "@/components/views/settings-view";
 
 export const metadata = { title: "Paramètres" };
 
-export default async function SettingsPage() {
-  const { settings, profile, snapshot, email } = (await getFinanceData())!;
-  return (
-    <div>
-      <PageHeader title="Paramètres" back="/plus" />
-      <SettingsScreen settings={settings} profile={profile} categories={snapshot.categories} email={email ?? ""} />
-    </div>
-  );
+// Static page: the data comes from the on-device finance store, not from the server.
+export default function Page() {
+  return <SettingsView />;
 }

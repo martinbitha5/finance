@@ -9,6 +9,7 @@ import { formatDayLabel, formatMoney, formatDate } from "@/lib/format";
 import { convert } from "@/lib/finance/currency";
 import { deleteTransaction, duplicateTransaction } from "@/actions/transactions";
 import { useAction } from "@/hooks/use-action";
+import { useFinanceOptional } from "@/components/finance/finance-provider";
 import { TransactionItem } from "./transaction-item";
 import { TransactionForm } from "./transaction-form";
 import { Sheet, ConfirmSheet } from "@/components/ui/sheet";
@@ -45,7 +46,17 @@ export function TransactionsList(p: Props) {
   const categoryById = useMemo(() => new Map(p.categories.map((c) => [c.id, c])), [p.categories]);
   const months = useMemo(() => Array.from(new Set(p.transactions.map((t) => t.date.slice(0, 7)))).sort().reverse(), [p.transactions]);
 
-  const del = useAction(deleteTransaction, { success: "Transaction supprimée", onSuccess: () => { setConfirmDelete(false); setSelected(null); } });
+  const store = useFinanceOptional();
+  const del = useAction(deleteTransaction, { success: "Transaction supprimée", onError: () => void store?.refresh() });
+  function removeSelected() {
+    if (!selected) return toast.error("Aucune transaction");
+    const id = selected.id;
+    // Disappears immediately; the server's fresh copy confirms (or the refresh restores it on error).
+    store?.patch((raw) => ({ ...raw, transactions: raw.transactions.filter((t) => t.id !== id) }));
+    setConfirmDelete(false);
+    setSelected(null);
+    void del.execute(id);
+  }
   const dup = useAction((id: string) => duplicateTransaction(id, p.today), { success: "Dupliquée pour aujourd'hui", onSuccess: () => setSelected(null) });
 
   const filtered = useMemo(() => {
@@ -229,7 +240,7 @@ export function TransactionsList(p: Props) {
       <ConfirmSheet
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
-        onConfirm={() => { if (selected) del.execute(selected.id); else toast.error("Aucune transaction"); }}
+        onConfirm={removeSelected}
         loading={del.pending}
         title="Supprimer cette transaction ?"
         description="Cette action est définitive."

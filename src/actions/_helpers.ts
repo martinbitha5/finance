@@ -1,11 +1,17 @@
 import "server-only";
-import { revalidatePath } from "next/cache";
 import type { z } from "zod";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { fieldErrors } from "@/lib/validation/schemas";
+import { loadFinanceRaw } from "@/services/finance-data";
+import type { FinanceRaw } from "@/lib/finance/data";
 
 export type ActionResult<T = null> =
-  | { ok: true; data: T }
+  | {
+      ok: true;
+      data: T;
+      /** Fresh rows after the mutation, so the device updates in the same round-trip. */
+      finance?: FinanceRaw;
+    }
   | { ok: false; error: string; fields?: Record<string, string> };
 
 export async function requireUser() {
@@ -30,14 +36,16 @@ export function fail(error: string): ActionResult<never> {
   return { ok: false, error };
 }
 
-export function revalidateApp() {
-  revalidatePath("/", "layout");
-}
-
-/** Wraps an action body with uniform error handling. */
+/**
+ * Wraps a mutating action with uniform error handling and, on success, reloads the user's
+ * rows so the client store can replace its data without a second request.
+ */
 export async function run<T>(fn: () => Promise<ActionResult<T>>): Promise<ActionResult<T>> {
   try {
-    return await fn();
+    const result = await fn();
+    if (!result.ok) return result;
+    const finance = await loadFinanceRaw();
+    return finance ? { ...result, finance } : result;
   } catch (e) {
     const message = e instanceof Error ? e.message : "Une erreur est survenue";
     return { ok: false, error: message };

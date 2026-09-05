@@ -1,7 +1,7 @@
 "use server";
 
 import { contributionSchema, goalSchema, uuid } from "@/lib/validation/schemas";
-import { parseInput, requireUser, revalidateApp, run, type ActionResult } from "./_helpers";
+import { parseInput, requireUser, run, type ActionResult } from "./_helpers";
 import { createTransaction } from "./transactions";
 
 export async function createGoal(input: unknown): Promise<ActionResult<{ id: string }>> {
@@ -16,7 +16,6 @@ export async function createGoal(input: unknown): Promise<ActionResult<{ id: str
       .select("id")
       .single();
     if (error) return { ok: false, error: error.message };
-    revalidateApp();
     return { ok: true, data: { id: data.id } };
   });
 }
@@ -29,7 +28,6 @@ export async function updateGoal(id: string, input: unknown): Promise<ActionResu
     const { supabase, user } = await requireUser();
     const { error } = await supabase.from("savings_goals").update(parsed.data).eq("id", id).eq("user_id", user.id);
     if (error) return { ok: false, error: error.message };
-    revalidateApp();
     return { ok: true, data: null };
   });
 }
@@ -40,7 +38,6 @@ export async function archiveGoal(id: string, archived = true): Promise<ActionRe
     const { supabase, user } = await requireUser();
     const { error } = await supabase.from("savings_goals").update({ is_archived: archived }).eq("id", id).eq("user_id", user.id);
     if (error) return { ok: false, error: error.message };
-    revalidateApp();
     return { ok: true, data: null };
   });
 }
@@ -53,7 +50,6 @@ export async function deleteGoal(id: string): Promise<ActionResult<null>> {
     await supabase.from("transactions").update({ savings_goal_id: null }).eq("savings_goal_id", id).eq("user_id", user.id);
     const { error } = await supabase.from("savings_goals").delete().eq("id", id).eq("user_id", user.id);
     if (error) return { ok: false, error: error.message };
-    revalidateApp();
     return { ok: true, data: null };
   });
 }

@@ -1,7 +1,7 @@
 "use server";
 
 import { incomeSchema, salarySchema, uuid } from "@/lib/validation/schemas";
-import { parseInput, requireUser, revalidateApp, run, type ActionResult } from "./_helpers";
+import { parseInput, requireUser, run, type ActionResult } from "./_helpers";
 
 /** Creates or updates the main recurring salary source (one per user). */
 export async function saveSalary(input: unknown): Promise<ActionResult<{ id: string }>> {
@@ -43,7 +43,6 @@ export async function saveSalary(input: unknown): Promise<ActionResult<{ id: str
       if (error) return { ok: false, error: error.message };
       id = data.id;
     }
-    revalidateApp();
     return { ok: true, data: { id } };
   });
 }
@@ -55,7 +54,6 @@ export async function createIncomeSource(input: unknown): Promise<ActionResult<{
     const { supabase, user } = await requireUser();
     const { data, error } = await supabase.from("income").insert({ ...parsed.data, user_id: user.id }).select("id").single();
     if (error) return { ok: false, error: error.message };
-    revalidateApp();
     return { ok: true, data: { id: data.id } };
   });
 }
@@ -68,7 +66,6 @@ export async function updateIncomeSource(id: string, input: unknown): Promise<Ac
     const { supabase, user } = await requireUser();
     const { error } = await supabase.from("income").update(parsed.data).eq("id", id).eq("user_id", user.id);
     if (error) return { ok: false, error: error.message };
-    revalidateApp();
     return { ok: true, data: null };
   });
 }
@@ -79,7 +76,6 @@ export async function deleteIncomeSource(id: string): Promise<ActionResult<null>
     const { supabase, user } = await requireUser();
     const { error } = await supabase.from("income").delete().eq("id", id).eq("user_id", user.id);
     if (error) return { ok: false, error: error.message };
-    revalidateApp();
     return { ok: true, data: null };
   });
 }

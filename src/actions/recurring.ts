@@ -2,7 +2,7 @@
 
 import { parseISO } from "date-fns";
 import { recurringSchema, uuid } from "@/lib/validation/schemas";
-import { parseInput, requireUser, revalidateApp, run, type ActionResult } from "./_helpers";
+import { parseInput, requireUser, run, type ActionResult } from "./_helpers";
 
 export async function createRecurring(input: unknown): Promise<ActionResult<{ id: string }>> {
   return run(async () => {
@@ -16,7 +16,6 @@ export async function createRecurring(input: unknown): Promise<ActionResult<{ id
       .select("id")
       .single();
     if (error) return { ok: false, error: error.message };
-    revalidateApp();
     return { ok: true, data: { id: data.id } };
   });
 }
@@ -34,7 +33,6 @@ export async function updateRecurring(id: string, input: unknown): Promise<Actio
       .eq("id", id)
       .eq("user_id", user.id);
     if (error) return { ok: false, error: error.message };
-    revalidateApp();
     return { ok: true, data: null };
   });
 }
@@ -45,7 +43,6 @@ export async function toggleRecurring(id: string, isActive: boolean): Promise<Ac
     const { supabase, user } = await requireUser();
     const { error } = await supabase.from("recurring_expenses").update({ is_active: !!isActive }).eq("id", id).eq("user_id", user.id);
     if (error) return { ok: false, error: error.message };
-    revalidateApp();
     return { ok: true, data: null };
   });
 }
@@ -56,7 +53,6 @@ export async function deleteRecurring(id: string): Promise<ActionResult<null>> {
     const { supabase, user } = await requireUser();
     const { error } = await supabase.from("recurring_expenses").delete().eq("id", id).eq("user_id", user.id);
     if (error) return { ok: false, error: error.message };
-    revalidateApp();
     return { ok: true, data: null };
   });
 }

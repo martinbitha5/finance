@@ -3,34 +3,22 @@ import { cache } from "react";
 import { parseISO } from "date-fns";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { getToday } from "./today";
-import { computeFinance } from "@/lib/finance/engine";
-import { normalizeRates } from "@/lib/finance/currency";
 import { advance } from "@/lib/finance/cycles";
 import { toISODate } from "@/lib/format";
-import type { FinanceSnapshot, FinanceSummary, Profile, Settings, AppNotification } from "@/lib/finance/types";
-import type { Currency } from "@/lib/constants";
+import { buildFinanceData, type FinanceData, type FinanceRaw } from "@/lib/finance/data";
 import type { Tables, TablesInsert } from "@/lib/supabase/database.types";
 
-export interface FinanceData {
-  userId: string;
-  email: string | null;
-  profile: Profile;
-  settings: Settings;
-  snapshot: FinanceSnapshot;
-  summary: FinanceSummary;
-  unreadNotifications: number;
-}
+export type { FinanceData, FinanceRaw };
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 /**
- * Loads everything for the current user, posts due recurring expenses, and runs the engine.
+ * Loads every row the app needs for the current user and posts due recurring expenses.
  *
- * Request budget (happy path): 1 local JWT check + 1 parallel batch of 10 queries. No waterfall.
- * Wrapped in React `cache` so layout + page (and any service called during the same render)
- * share one fetch per request.
+ * Request budget (happy path): 1 local JWT check + 1 parallel batch of 12 queries. No waterfall.
+ * Not memoized on purpose: server actions call it *after* a mutation and must see fresh rows.
  */
-export const getFinanceData = cache(async (): Promise<FinanceData | null> => {
+export async function loadFinanceRaw(): Promise<FinanceRaw | null> {
   const [supabase, user, today] = await Promise.all([createClient(), getUser(), getToday()]);
   if (!user) return null;
   const todayISO = toISODate(today);
@@ -55,10 +43,11 @@ export const getFinanceData = cache(async (): Promise<FinanceData | null> => {
     rows = { ...rows, transactions: transactions.data ?? [], recurring: recurring.data ?? [] };
   }
 
-  const snapshot: FinanceSnapshot = {
-    today,
-    currency: settings.currency as Currency,
-    rates: normalizeRates(settings.exchange_rates),
+  return {
+    userId: user.id,
+    email: user.email,
+    profile,
+    settings,
     accounts: rows.accounts,
     categories: rows.categories,
     transactions: rows.transactions,
@@ -67,17 +56,16 @@ export const getFinanceData = cache(async (): Promise<FinanceData | null> => {
     incomeSources: rows.incomeSources,
     goals: rows.goals,
     debts: rows.debts,
-  };
-
-  return {
-    userId: user.id,
-    email: user.email,
-    profile,
-    settings,
-    snapshot,
-    summary: computeFinance(snapshot),
+    notifications: rows.notifications,
     unreadNotifications: rows.unread,
+    loadedAt: new Date().toISOString(),
   };
+}
+
+/** Server-rendered pages (onboarding) get the computed data, memoized per request. */
+export const getFinanceData = cache(async (): Promise<FinanceData | null> => {
+  const [raw, today] = await Promise.all([loadFinanceRaw(), getToday()]);
+  return raw ? buildFinanceData(raw, today) : null;
 });
 
 const selectTransactions = (supabase: Supabase, userId: string) =>
@@ -88,7 +76,7 @@ const selectRecurring = (supabase: Supabase, userId: string) =>
 
 /** Every table the app needs, fetched in one parallel batch. */
 async function loadUserRows(supabase: Supabase, userId: string) {
-  const [profile, settings, accounts, categories, transactions, budgets, recurring, incomeSources, goals, unread, debts] =
+  const [profile, settings, accounts, categories, transactions, budgets, recurring, incomeSources, goals, unread, debts, notifications] =
     await Promise.all([
       supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
       supabase.from("settings").select("*").eq("user_id", userId).maybeSingle(),
@@ -101,6 +89,7 @@ async function loadUserRows(supabase: Supabase, userId: string) {
       supabase.from("savings_goals").select("*").eq("user_id", userId).order("created_at"),
       supabase.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("is_read", false),
       supabase.from("debts").select("*").eq("user_id", userId).order("created_at"),
+      supabase.from("notifications").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
     ]);
 
   return {
@@ -115,6 +104,7 @@ async function loadUserRows(supabase: Supabase, userId: string) {
     goals: goals.data ?? [],
     unread: unread.count ?? 0,
     debts: debts.data ?? [],
+    notifications: notifications.data ?? [],
   };
 }
 
@@ -175,10 +165,4 @@ async function postDueRecurringExpenses(
     nextDates.map(({ id, next_date }) => supabase.from("recurring_expenses").update({ next_date }).eq("id", id)),
   );
   return true;
-}
-
-export async function getNotifications(): Promise<AppNotification[]> {
-  const supabase = await createClient();
-  const { data } = await supabase.from("notifications").select("*").order("created_at", { ascending: false }).limit(50);
-  return data ?? [];
 }

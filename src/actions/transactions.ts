@@ -2,7 +2,7 @@
 
 import { transactionSchema, uuid } from "@/lib/validation/schemas";
 import { INCOME_TYPE_CATEGORY_SLUG } from "@/lib/constants";
-import { parseInput, requireUser, revalidateApp, run, type ActionResult } from "./_helpers";
+import { parseInput, requireUser, run, type ActionResult } from "./_helpers";
 import { refreshDebtSettlement } from "./debts";
 
 /** Marks a goal completed when its saved amount reaches the target. */
@@ -49,7 +49,6 @@ export async function createTransaction(input: unknown): Promise<ActionResult<{ 
       .single();
     if (error) return { ok: false, error: error.message };
     if (d.type === "saving" && d.savings_goal_id) await refreshGoalCompletion(supabase, d.savings_goal_id);
-    revalidateApp();
     return { ok: true, data: { id: data.id } };
   });
 }
@@ -73,7 +72,6 @@ export async function updateTransaction(id: string, input: unknown): Promise<Act
     if (error) return { ok: false, error: error.message };
     for (const g of new Set([before?.savings_goal_id, d.savings_goal_id])) if (g) await refreshGoalCompletion(supabase, g);
     if (debt_id) await refreshDebtSettlement(supabase, debt_id);
-    revalidateApp();
     return { ok: true, data: null };
   });
 }
@@ -87,7 +85,6 @@ export async function deleteTransaction(id: string): Promise<ActionResult<null>>
     if (error) return { ok: false, error: error.message };
     if (before?.savings_goal_id) await refreshGoalCompletion(supabase, before.savings_goal_id);
     if (before?.debt_id) await refreshDebtSettlement(supabase, before.debt_id);
-    revalidateApp();
     return { ok: true, data: null };
   });
 }
@@ -107,7 +104,6 @@ export async function duplicateTransaction(id: string, date?: string): Promise<A
       .single();
     if (error) return { ok: false, error: error.message };
     if (src.savings_goal_id) await refreshGoalCompletion(supabase, src.savings_goal_id);
-    revalidateApp();
     return { ok: true, data: { id: data.id } };
   });
 }

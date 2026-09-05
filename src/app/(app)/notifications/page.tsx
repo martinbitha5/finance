@@ -1,15 +1,8 @@
-import { getNotifications } from "@/services/finance-data";
-import { PageHeader } from "@/components/layout/page-header";
-import { NotificationsScreen } from "@/components/notifications/notifications-screen";
+import { NotificationsView } from "@/components/views/notifications-view";
 
 export const metadata = { title: "Notifications" };
 
-export default async function NotificationsPage() {
-  const items = await getNotifications();
-  return (
-    <div>
-      <PageHeader title="Notifications" back="/" />
-      <NotificationsScreen items={items} />
-    </div>
-  );
+// Static page: the data comes from the on-device finance store, not from the server.
+export default function Page() {
+  return <NotificationsView />;
 }

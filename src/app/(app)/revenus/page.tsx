@@ -1,15 +1,8 @@
-import { getFinanceData } from "@/services/finance-data";
-import { PageHeader } from "@/components/layout/page-header";
-import { IncomeScreen } from "@/components/income/income-screen";
+import { IncomeView } from "@/components/views/income-view";
 
 export const metadata = { title: "Revenus & salaire" };
 
-export default async function IncomePage() {
-  const { summary: s, snapshot } = (await getFinanceData())!;
-  return (
-    <div>
-      <PageHeader title="Revenus & salaire" question="Combien je gagne, et quand ?" back="/plus" />
-      <IncomeScreen s={s} sources={snapshot.incomeSources} />
-    </div>
-  );
+// Static page: the data comes from the on-device finance store, not from the server.
+export default function Page() {
+  return <IncomeView />;
 }

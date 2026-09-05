@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { addDays, parseISO } from "date-fns";
 import { createTransaction, updateTransaction } from "@/actions/transactions";
 import { useAction } from "@/hooks/use-action";
+import { useFinanceOptional } from "@/components/finance/finance-provider";
 import { CURRENCIES, PAYMENT_METHODS, type Currency, type PaymentMethod, type TransactionType } from "@/lib/constants";
 import type { Category, IncomeSource, SavingsGoal, Transaction } from "@/lib/finance/types";
 import { currencySymbol, toISODate } from "@/lib/format";
@@ -46,7 +47,16 @@ export function TransactionForm(p: TransactionFormProps) {
   const [incomeId, setIncomeId] = useState<string | null>(p.initial?.income_id ?? null);
   const [newCat, setNewCat] = useState(false);
 
-  const create = useAction(createTransaction, { success: "Enregistré ✓", onSuccess: () => p.onDone?.() });
+  const store = useFinanceOptional();
+  // New entries are shown on the device before the server confirms (see submit()).
+  const optimistic = !p.initial && !!store?.raw;
+  const create = useAction(createTransaction, {
+    success: "Enregistré ✓",
+    onSuccess: () => {
+      if (!optimistic) p.onDone?.();
+    },
+    onError: () => void store?.refresh(),
+  });
   const update = useAction((input: unknown) => updateTransaction(p.initial!.id, input), { success: "Modifié ✓", onSuccess: () => p.onDone?.() });
   const pending = create.pending || update.pending;
   const fields = p.initial ? update.fields : create.fields;
@@ -73,8 +83,37 @@ export function TransactionForm(p: TransactionFormProps) {
       account_id: null,
       debt_id: p.initial?.debt_id ?? null,
     };
-    if (p.initial) update.execute(payload);
-    else create.execute(payload);
+    if (p.initial) {
+      update.execute(payload);
+      return;
+    }
+    if (optimistic && store?.raw) {
+      // Show it immediately and move on; the server's fresh copy replaces this row when it lands.
+      const now = new Date().toISOString();
+      const temp: Transaction = {
+        id: `tmp-${Date.now()}`,
+        user_id: store.raw.userId,
+        type,
+        amount: amountNumber,
+        currency,
+        category_id: payload.category_id,
+        description: payload.description,
+        date,
+        payment_method: method,
+        savings_goal_id: payload.savings_goal_id,
+        income_id: payload.income_id,
+        account_id: null,
+        debt_id: null,
+        recurring_expense_id: null,
+        notes: null,
+        is_demo: false,
+        created_at: now,
+        updated_at: now,
+      };
+      store.patch((raw) => ({ ...raw, transactions: [temp, ...raw.transactions] }));
+      p.onDone?.();
+    }
+    create.execute(payload);
   }
 
   return (

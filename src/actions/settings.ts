@@ -2,7 +2,7 @@
 
 import { settingsSchema } from "@/lib/validation/schemas";
 import { normalizeRates } from "@/lib/finance/currency";
-import { parseInput, requireUser, revalidateApp, run, type ActionResult } from "./_helpers";
+import { parseInput, requireUser, run, type ActionResult } from "./_helpers";
 
 export async function saveSettings(input: unknown): Promise<ActionResult<null>> {
   return run(async () => {
@@ -24,7 +24,6 @@ export async function saveSettings(input: unknown): Promise<ActionResult<null>> 
     if (d.display_name !== undefined) {
       await supabase.from("profiles").update({ display_name: d.display_name || null }).eq("id", user.id);
     }
-    revalidateApp();
     return { ok: true, data: null };
   });
 }
@@ -33,7 +32,6 @@ export async function completeOnboarding(): Promise<ActionResult<null>> {
   return run(async () => {
     const { supabase, user } = await requireUser();
     await supabase.from("profiles").update({ onboarding_completed: true }).eq("id", user.id);
-    revalidateApp();
     return { ok: true, data: null };
   });
 }

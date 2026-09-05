@@ -78,12 +78,6 @@ Tu peux comparer ce mois-ci au mois dernier, voir tes plus grosses dépenses, la
 
 ---
 
-## Essayer sans rien saisir
-
-Un mode démonstration te permet de découvrir l'application avec des données fictives : un salaire, un loyer, quelques abonnements, des budgets, des objectifs et deux mois de dépenses. Tu peux tout effacer en un clic quand tu veux commencer avec tes vrais chiffres.
-
----
-
 ## À qui s'adresse MONY ?
 
 À toute personne qui veut reprendre le contrôle de son argent sans devenir comptable. Que tu sois salarié, freelance, étudiant ou entrepreneur, si tu t'es déjà demandé « est-ce que je peux me permettre ça ? », MONY est fait pour toi.

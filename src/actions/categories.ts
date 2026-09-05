@@ -1,7 +1,7 @@
 "use server";
 
 import { categorySchema, uuid } from "@/lib/validation/schemas";
-import { parseInput, requireUser, revalidateApp, run, type ActionResult } from "./_helpers";
+import { parseInput, requireUser, run, type ActionResult } from "./_helpers";
 
 export async function createCategory(input: unknown): Promise<ActionResult<{ id: string }>> {
   return run(async () => {
@@ -16,7 +16,6 @@ export async function createCategory(input: unknown): Promise<ActionResult<{ id:
       .select("id")
       .single();
     if (error) return { ok: false, error: error.message };
-    revalidateApp();
     return { ok: true, data: { id: data.id } };
   });
 }
@@ -29,7 +28,6 @@ export async function updateCategory(id: string, input: unknown): Promise<Action
     const { supabase, user } = await requireUser();
     const { error } = await supabase.from("categories").update(parsed.data).eq("id", id).eq("user_id", user.id);
     if (error) return { ok: false, error: error.message };
-    revalidateApp();
     return { ok: true, data: null };
   });
 }
@@ -43,7 +41,6 @@ export async function deleteCategory(id: string): Promise<ActionResult<null>> {
     if (cat.is_default) return { ok: false, error: "Les catégories par défaut ne peuvent pas être supprimées." };
     const { error } = await supabase.from("categories").delete().eq("id", id).eq("user_id", user.id);
     if (error) return { ok: false, error: error.message };
-    revalidateApp();
     return { ok: true, data: null };
   });
 }

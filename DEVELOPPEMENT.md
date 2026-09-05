@@ -38,6 +38,27 @@ Chaque table est protégée par RLS (`auth.uid() = user_id`). Un trigger sur `au
 > Supabase demande par défaut une confirmation d'email à l'inscription. Pour tester plus vite : Dashboard → Authentication → Providers → Email → désactive « Confirm email ».
 > En production, renseigne aussi `Site URL` et `Redirect URLs` (`https://ton-domaine/auth/callback`).
 
+### E-mails (SMTP Brevo)
+
+Le service d'e-mail intégré de Supabase est limité à quelques envois par heure. L'e-mail de confirmation d'inscription passe donc par le SMTP de Brevo, configuré dans le dashboard Supabase (Authentication → Emails → SMTP Settings → « Enable Custom SMTP »). Aucune variable d'environnement côté app : c'est Supabase qui envoie.
+
+| Champ | Valeur |
+| --- | --- |
+| Sender email | `martinbitha6@gmail.com` (expéditeur validé dans Brevo → Paramètres → Expéditeurs) |
+| Sender name | `MONY` |
+| Host | `smtp-relay.brevo.com` |
+| Port | `587` |
+| Username | le login SMTP affiché sur <https://app.brevo.com/settings/keys/smtp> (forme `xxxx@smtp-brevo.com`) |
+| Password | une **clé SMTP** Brevo (`xsmtpsib-…`), pas une clé API (`xkeysib-…`). À générer sur la même page. Jamais dans le dépôt. |
+
+Modèle « Confirm signup » (Authentication → Emails → Templates) : sujet `Active ton compte MONY`, corps dans [`supabase/templates/confirm-signup.html`](supabase/templates/confirm-signup.html). Il utilise `{{ .ConfirmationURL }}`, qui redirige vers `/auth/callback` puis `/onboarding`.
+
+Pièges connus :
+
+- `525 5.7.1 Unauthorized IP address` : la restriction « adresses IP autorisées » est active sur le compte Brevo (Paramètres → Sécurité). La désactiver, Supabase envoie depuis des IP variables.
+- Sans domaine propre validé dans Brevo, l'expéditeur Gmail est réécrit en `…@brevosend.com`. Un domaine d'envoi authentifié (SPF/DKIM) règle ça.
+- Vérification : inscription depuis l'app → événement « delivered » dans Brevo → Transactionnel → Journaux.
+
 ## Structure
 
 ```
@@ -71,9 +92,9 @@ scripts/generate-icons.mjs  génère les icônes PWA et les assets de marque
 - **Dettes** (`debts`) : ce que je dois (`owed`) et ce qu'on me doit (`lent`). Les remboursements sont des transactions liées (`transactions.debt_id`) ; la dette passe « liquidée » quand ils atteignent le capital. La mensualité prévue non encore payée dans le cycle est retirée de l'argent libre. Pour chaque dette : restant, % remboursé, jours/mois avant l'échéance, mensualité requise pour tenir la date, date de liquidation estimée au rythme prévu.
 - **Multi-devises** : les montants sont stockés dans leur devise ; l'affichage convertit avec les taux définis dans Paramètres et affiche toujours le taux utilisé.
 
-## Mode démo
+## Export
 
-Paramètres → « Charger les données de démonstration » (salaire 650 $, loyer, internet, Netflix, budgets, objectifs, ~2 mois de dépenses). « Effacer les données de démo » ne supprime que ces lignes.
+Paramètres → « Exporter mes transactions » génère un CSV (séparateur `;`, BOM UTF-8) côté client depuis le store, via [`src/lib/export-csv.ts`](src/lib/export-csv.ts).
 
 ## Installer sur téléphone
 

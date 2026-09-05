@@ -1,9 +1,11 @@
 import { APP_TAGLINE } from "@/lib/constants";
 import { Logo } from "@/components/brand/logo";
+import { ForgetFinanceCache } from "@/components/finance/forget-cache";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-dvh flex flex-col lg:flex-row">
+      <ForgetFinanceCache />
       <section className="aurora text-ink-fg px-6 pt-safe pb-10 lg:w-1/2 lg:min-h-dvh lg:flex lg:flex-col lg:justify-between lg:p-14 relative overflow-hidden">
         <div className="pt-10 lg:pt-0">
           <Logo size={36} className="gap-2.5" wordmarkClassName="text-lg" />

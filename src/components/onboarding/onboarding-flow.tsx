@@ -10,7 +10,6 @@ import { createRecurring } from "@/actions/recurring";
 import { completeOnboarding } from "@/actions/settings";
 import { useAction } from "@/hooks/use-action";
 import { SalaryForm } from "@/components/income/income-screen";
-import { DemoButton } from "@/components/settings/demo-button";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
@@ -23,7 +22,7 @@ const SUGGESTED = [
   { name: "Transport", slug: "transport", amount: 40 },
 ];
 
-export function OnboardingFlow({ summary, categories, name, demoLoaded }: { summary: FinanceSummary; categories: Category[]; name: string; demoLoaded: boolean }) {
+export function OnboardingFlow({ summary, categories, name }: { summary: FinanceSummary; categories: Category[]; name: string }) {
   const router = useRouter();
   const [step, setStep] = useState<0 | 1 | 2>(summary.salary.configured ? 2 : 0);
   const [charges, setCharges] = useState<{ name: string; amount: string; slug: string; done: boolean }[]>([]);
@@ -58,8 +57,9 @@ export function OnboardingFlow({ summary, categories, name, demoLoaded }: { summ
             <SalaryForm s={summary} onDone={() => setStep(1)} submitLabel="Continuer" />
           </div>
           <div className="mt-6 text-center">
-            <p className="text-xs text-fg-subtle mb-2">Tu veux juste voir l&apos;app en action ?</p>
-            <DemoButton loaded={demoLoaded} variant="ghost" />
+            <Button variant="ghost" onClick={() => setStep(2)}>
+              Je configurerai mon salaire plus tard
+            </Button>
           </div>
         </div>
       ) : null}

@@ -1,7 +1,7 @@
 "use server";
 
 import { debtPaymentSchema, debtSchema, uuid } from "@/lib/validation/schemas";
-import { parseInput, requireUser, revalidateApp, run, type ActionResult } from "./_helpers";
+import { parseInput, requireUser, run, type ActionResult } from "./_helpers";
 
 type Supabase = Awaited<ReturnType<typeof requireUser>>["supabase"];
 
@@ -80,7 +80,6 @@ export async function createDebt(input: unknown): Promise<ActionResult<{ id: str
       if (txErr) return { ok: false, error: txErr.message };
       await refreshDebtSettlement(supabase, debt.id);
     }
-    revalidateApp();
     return { ok: true, data: { id: debt.id } };
   });
 }
@@ -109,7 +108,6 @@ export async function updateDebt(id: string, input: unknown): Promise<ActionResu
       .eq("user_id", user.id);
     if (error) return { ok: false, error: error.message };
     await refreshDebtSettlement(supabase, id);
-    revalidateApp();
     return { ok: true, data: null };
   });
 }
@@ -137,7 +135,6 @@ export async function payDebt(input: unknown): Promise<ActionResult<{ settled: b
     if (error) return { ok: false, error: error.message };
     await refreshDebtSettlement(supabase, debt.id, parsed.data.date);
     const { data: after } = await supabase.from("debts").select("is_settled").eq("id", debt.id).maybeSingle();
-    revalidateApp();
     return { ok: true, data: { settled: !!after?.is_settled } };
   });
 }
@@ -149,7 +146,6 @@ export async function setDebtSettled(id: string, settled: boolean, today: string
     const { supabase, user } = await requireUser();
     const { error } = await supabase.from("debts").update({ is_settled: settled, settled_at: settled ? today : null }).eq("id", id).eq("user_id", user.id);
     if (error) return { ok: false, error: error.message };
-    revalidateApp();
     return { ok: true, data: null };
   });
 }
@@ -162,7 +158,6 @@ export async function deleteDebt(id: string): Promise<ActionResult<null>> {
     await supabase.from("transactions").update({ debt_id: null }).eq("debt_id", id).eq("user_id", user.id);
     const { error } = await supabase.from("debts").delete().eq("id", id).eq("user_id", user.id);
     if (error) return { ok: false, error: error.message };
-    revalidateApp();
     return { ok: true, data: null };
   });
 }

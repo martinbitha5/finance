@@ -6,6 +6,7 @@ import { fr } from "date-fns/locale";
 import type { AppNotification } from "@/lib/finance/types";
 import { clearNotifications, markAllNotificationsRead, markNotificationRead } from "@/actions/notifications";
 import { useAction } from "@/hooks/use-action";
+import { useFinanceOptional } from "@/components/finance/finance-provider";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/primitives";
 import { cn } from "@/lib/utils";
@@ -18,10 +19,21 @@ const tone: Record<AppNotification["severity"], string> = {
 };
 
 export function NotificationsScreen({ items }: { items: AppNotification[] }) {
-  const readOne = useAction(markNotificationRead, {});
+  const store = useFinanceOptional();
+  const readOne = useAction(markNotificationRead, { onError: () => void store?.refresh() });
   const readAll = useAction(markAllNotificationsRead, { success: "Tout est lu" });
   const clear = useAction(clearNotifications, { success: "Notifications effacées" });
   const unread = items.filter((n) => !n.is_read).length;
+
+  function markRead(id: string) {
+    // Marked on the device right away; the server's copy confirms it.
+    store?.patch((raw) => ({
+      ...raw,
+      notifications: raw.notifications.map((n) => (n.id === id ? { ...n, is_read: true } : n)),
+      unreadNotifications: Math.max(0, raw.unreadNotifications - 1),
+    }));
+    void readOne.execute(id);
+  }
 
   if (items.length === 0) {
     return <EmptyState icon="🔔" title="Aucune notification" description="MONY te préviendra seulement quand c'est utile : budget presque atteint, salaire qui arrive, rythme trop élevé…" />;
@@ -41,7 +53,7 @@ export function NotificationsScreen({ items }: { items: AppNotification[] }) {
           <li key={n.id}>
             <button
               type="button"
-              onClick={() => !n.is_read && readOne.execute(n.id)}
+              onClick={() => !n.is_read && markRead(n.id)}
               className={cn("w-full flex items-start gap-3 px-4 py-3.5 text-left transition-colors", !n.is_read ? "bg-accent/6 hover:bg-accent/10" : "hover:bg-surface-2/60")}
             >
               <span className={cn("mt-2 h-2 w-2 rounded-full shrink-0", tone[n.severity], n.is_read && "opacity-30")} />

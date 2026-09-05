@@ -1,25 +1,40 @@
 "use client";
 
 import { useState } from "react";
-import { LogOut, Pencil, Trash2, Plus, Download } from "lucide-react";
-import type { Category, Profile, Settings } from "@/lib/finance/types";
-import { CURRENCIES, type Currency, APP_NAME } from "@/lib/constants";
+import Link from "next/link";
+import { LogOut, Download, ChevronRight, Tags } from "lucide-react";
+import { toast } from "sonner";
+import type { Category, Debt, Profile, SavingsGoal, Settings, Transaction } from "@/lib/finance/types";
+import { CURRENCIES, type Currency } from "@/lib/constants";
 import { normalizeRates, describeRate } from "@/lib/finance/currency";
 import { saveSettings } from "@/actions/settings";
-import { deleteCategory } from "@/actions/categories";
 import { signOut } from "@/actions/auth";
 import { useAction } from "@/hooks/use-action";
+import { transactionsToCsv, downloadText } from "@/lib/export-csv";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
-import { Toggle, IconBubble } from "@/components/ui/primitives";
+import { Toggle } from "@/components/ui/primitives";
 import { CardTitle } from "@/components/ui/card";
-import { Sheet, ConfirmSheet } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { CategoryForm } from "@/components/categories/category-form";
-import { DemoButton } from "./demo-button";
 import { InstallHint } from "@/components/pwa/install-hint";
 
-export function SettingsScreen({ settings, profile, categories, email }: { settings: Settings; profile: Profile; categories: Category[]; email: string }) {
+export function SettingsScreen({
+  settings,
+  profile,
+  categories,
+  transactions,
+  goals,
+  debts,
+  email,
+}: {
+  settings: Settings;
+  profile: Profile;
+  categories: Category[];
+  transactions: Transaction[];
+  goals: SavingsGoal[];
+  debts: Debt[];
+  email: string;
+}) {
   const rates = normalizeRates(settings.exchange_rates);
   const [name, setName] = useState(profile.display_name ?? "");
   const [currency, setCurrency] = useState<Currency>(settings.currency);
@@ -29,9 +44,12 @@ export function SettingsScreen({ settings, profile, categories, email }: { setti
   const [gbp, setGbp] = useState(String(rates.GBP));
   const save = useAction(saveSettings, { success: "Paramètres enregistrés" });
 
-  const [catSheet, setCatSheet] = useState<{ mode: "new" | "edit"; cat?: Category } | null>(null);
-  const [toDelete, setToDelete] = useState<Category | null>(null);
-  const delCat = useAction(deleteCategory, { success: "Catégorie supprimée", onSuccess: () => setToDelete(null) });
+  function exportCsv() {
+    if (transactions.length === 0) return toast.error("Aucune transaction à exporter.");
+    const csv = transactionsToCsv(transactions, categories, goals, debts);
+    downloadText(`mony-transactions-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+    toast.success(`${transactions.length} transactions exportées`);
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -53,15 +71,25 @@ export function SettingsScreen({ settings, profile, categories, email }: { setti
         <CardTitle className="mt-2">Devise principale</CardTitle>
         <Field label="Tous les montants sont affichés dans cette devise" error={save.fields.currency}>
           <Select value={currency} onChange={(e) => setCurrency(e.target.value as Currency)}>
-            {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.symbol} · {c.label} ({c.code})</option>)}
+            {CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.symbol} · {c.label} ({c.code})
+              </option>
+            ))}
           </Select>
         </Field>
         <div className="rounded-2xl bg-surface-2/70 p-4">
           <div className="text-[12px] font-semibold text-fg-muted mb-2">Taux de change (pour 1 USD)</div>
           <div className="grid grid-cols-3 gap-2">
-            <Field label="CDF"><Input inputMode="decimal" value={cdf} onChange={(e) => setCdf(e.target.value)} /></Field>
-            <Field label="EUR"><Input inputMode="decimal" value={eur} onChange={(e) => setEur(e.target.value)} /></Field>
-            <Field label="GBP"><Input inputMode="decimal" value={gbp} onChange={(e) => setGbp(e.target.value)} /></Field>
+            <Field label="CDF">
+              <Input inputMode="decimal" value={cdf} onChange={(e) => setCdf(e.target.value)} />
+            </Field>
+            <Field label="EUR">
+              <Input inputMode="decimal" value={eur} onChange={(e) => setEur(e.target.value)} />
+            </Field>
+            <Field label="GBP">
+              <Input inputMode="decimal" value={gbp} onChange={(e) => setGbp(e.target.value)} />
+            </Field>
           </div>
           <p className="text-[11px] text-fg-subtle mt-2">
             Les montants saisis dans une autre devise sont convertis avec ces taux, et le taux utilisé est toujours affiché. Exemple : {describeRate("USD", "CDF", { ...rates, CDF: Number(cdf) || rates.CDF })}.
@@ -78,32 +106,35 @@ export function SettingsScreen({ settings, profile, categories, email }: { setti
         <div className="flex items-center justify-between rounded-2xl bg-surface-2/70 px-4 py-3">
           <div>
             <div className="text-sm font-semibold">Alertes intelligentes</div>
-            <div className="text-xs text-fg-muted">Budgets, salaire, rythme de dépenses, objectifs.</div>
+            <div className="text-xs text-fg-muted">Budgets, salaire, dettes, rythme de dépenses, objectifs.</div>
           </div>
           <Toggle checked={notif} onChange={setNotif} label="Notifications" />
         </div>
 
-        <Button type="submit" size="lg" full loading={save.pending}>Enregistrer</Button>
+        <Button type="submit" size="lg" full loading={save.pending}>
+          Enregistrer
+        </Button>
       </form>
 
-      <section className="card p-5">
-        <CardTitle action={<Button size="sm" variant="secondary" onClick={() => setCatSheet({ mode: "new" })}><Plus className="h-4 w-4" /> Nouvelle</Button>}>Catégories</CardTitle>
-        <ul className="divide-y divide-border -mx-5">
-          {categories.filter((c) => c.kind === "expense").map((c) => (
-            <li key={c.id} className="flex items-center gap-3 px-5 py-2.5">
-              <IconBubble icon={c.icon} color={c.color} size="sm" />
-              <span className="flex-1 font-semibold text-sm truncate">{c.name}</span>
-              <button type="button" onClick={() => setCatSheet({ mode: "edit", cat: c })} aria-label="Modifier" className="p-1 text-fg-subtle hover:text-fg"><Pencil className="h-4 w-4" /></button>
-              {!c.is_default ? <button type="button" onClick={() => setToDelete(c)} aria-label="Supprimer" className="p-1 text-fg-subtle hover:text-negative"><Trash2 className="h-4 w-4" /></button> : <span className="w-6" />}
-            </li>
-          ))}
-        </ul>
-      </section>
+      <Link href="/categories" className="card p-4 flex items-center gap-3 press hover:bg-surface-2/60 transition-colors">
+        <span className="h-10 w-10 rounded-2xl bg-surface-2 inline-flex items-center justify-center">
+          <Tags className="h-5 w-5" />
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="block font-semibold">Catégories</span>
+          <span className="block text-xs text-fg-muted">
+            {categories.filter((c) => c.kind === "expense").length} catégories de dépenses · renommer, colorer, ajouter
+          </span>
+        </span>
+        <ChevronRight className="h-4 w-4 text-fg-subtle" />
+      </Link>
 
       <section className="card p-5">
-        <CardTitle>Mode démo</CardTitle>
-        <p className="text-sm text-fg-muted mb-3">Un jeu de données réaliste (salaire 650 $, charges, budgets, objectifs) pour découvrir {APP_NAME}.</p>
-        <DemoButton loaded={settings.demo_loaded} full />
+        <CardTitle>Mes données</CardTitle>
+        <p className="text-sm text-fg-muted mb-3">Télécharge toutes tes transactions dans un fichier CSV lisible par Excel, Numbers ou Google Sheets.</p>
+        <Button variant="secondary" full onClick={exportCsv}>
+          <Download className="h-4 w-4" /> Exporter mes transactions ({transactions.length})
+        </Button>
       </section>
 
       <section className="card p-5">
@@ -112,14 +143,10 @@ export function SettingsScreen({ settings, profile, categories, email }: { setti
       </section>
 
       <form action={signOut} className="pb-4">
-        <Button type="submit" variant="outline" full><LogOut className="h-4 w-4" /> Se déconnecter</Button>
+        <Button type="submit" variant="outline" full>
+          <LogOut className="h-4 w-4" /> Se déconnecter
+        </Button>
       </form>
-
-      <Sheet open={!!catSheet} onClose={() => setCatSheet(null)} title={catSheet?.mode === "edit" ? "Modifier la catégorie" : "Nouvelle catégorie"}>
-        <CategoryForm key={catSheet?.cat?.id ?? "new"} initial={catSheet?.cat} onDone={() => setCatSheet(null)} />
-      </Sheet>
-      <ConfirmSheet open={!!toDelete} onClose={() => setToDelete(null)} onConfirm={() => toDelete && delCat.execute(toDelete.id)} loading={delCat.pending} title="Supprimer cette catégorie ?" description="Les transactions associées deviendront « sans catégorie »." />
-      <span className="hidden"><Download /></span>
     </div>
   );
 }
