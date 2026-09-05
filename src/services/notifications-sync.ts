@@ -1,6 +1,7 @@
 import "server-only";
 import type { createClient } from "@/lib/supabase/server";
 import type { FinanceSummary } from "@/lib/finance/types";
+import { sendPushToUser } from "@/lib/push/server";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -20,9 +21,19 @@ const NOTIFY_KINDS = new Set([
   "debt_behind",
 ]);
 
+/** Écran ouvert quand on touche la notification push. */
+function targetUrl(kind: string, href?: string) {
+  if (href) return href;
+  if (kind.startsWith("budget")) return "/budgets";
+  if (kind.startsWith("debt")) return "/dettes";
+  if (kind.startsWith("goal")) return "/objectifs";
+  return "/";
+}
+
 /**
- * Turns the current insights into notifications, once per pay cycle per insight.
- * Idempotent: the (user_id, dedupe_key) unique index prevents duplicates.
+ * Turns the current insights into notifications, once per pay cycle per insight, and pushes
+ * the NEW ones to the user's devices. Idempotent: the (user_id, dedupe_key) unique index
+ * prevents duplicates, and only rows that did not exist before are pushed.
  * Takes an already-created client so it can run inside `after()` (no request APIs there).
  */
 export async function syncNotifications(supabase: Supabase, userId: string, summary: FinanceSummary, enabled: boolean) {
@@ -32,7 +43,13 @@ export async function syncNotifications(supabase: Supabase, userId: string, summ
   );
   if (candidates.length === 0) return;
 
-  const rows = candidates.map((i) => ({
+  const keys = candidates.map((i) => `${i.id}:${summary.cycle.start}`);
+  const { data: existing } = await supabase.from("notifications").select("dedupe_key").eq("user_id", userId).in("dedupe_key", keys);
+  const seen = new Set((existing ?? []).map((e) => e.dedupe_key));
+  const fresh = candidates.filter((i) => !seen.has(`${i.id}:${summary.cycle.start}`));
+  if (fresh.length === 0) return;
+
+  const rows = fresh.map((i) => ({
     user_id: userId,
     kind: i.kind,
     severity: i.severity,
@@ -40,5 +57,20 @@ export async function syncNotifications(supabase: Supabase, userId: string, summ
     body: i.body ?? "",
     dedupe_key: `${i.id}:${summary.cycle.start}`,
   }));
-  await supabase.from("notifications").upsert(rows, { onConflict: "user_id,dedupe_key", ignoreDuplicates: true });
+  const { data: inserted } = await supabase
+    .from("notifications")
+    .upsert(rows, { onConflict: "user_id,dedupe_key", ignoreDuplicates: true })
+    .select("dedupe_key");
+  const insertedKeys = new Set((inserted ?? []).map((r) => r.dedupe_key));
+
+  // One push per new notification (most urgent first), capped so a first sync never spams.
+  const toPush = fresh.filter((i) => insertedKeys.has(`${i.id}:${summary.cycle.start}`)).slice(0, 3);
+  for (const i of toPush) {
+    await sendPushToUser(supabase, userId, {
+      title: `${i.icon} ${i.title}`,
+      body: i.body,
+      url: targetUrl(i.kind, i.href),
+      tag: `mony-${i.kind}`,
+    });
+  }
 }

@@ -96,6 +96,20 @@ scripts/generate-icons.mjs  génère les icônes PWA et les assets de marque
 - **Dettes** (`debts`) : ce que je dois (`owed`) et ce qu'on me doit (`lent`). Les remboursements sont des transactions liées (`transactions.debt_id`) ; la dette passe « liquidée » quand ils atteignent le capital. La mensualité prévue non encore payée dans le cycle est retirée de l'argent libre. Pour chaque dette : restant, % remboursé, jours/mois avant l'échéance, mensualité requise pour tenir la date, date de liquidation estimée au rythme prévu.
 - **Multi-devises** : les montants sont stockés dans leur devise ; l'affichage convertit avec les taux définis dans Paramètres et affiche toujours le taux utilisé.
 
+## Notifications push (Web Push)
+
+Les insights qui méritent une alerte (budget, dette, salaire, objectif, rythme…) créent une ligne `notifications` une fois par cycle de paie ([`src/services/notifications-sync.ts`](src/services/notifications-sync.ts)). Les **nouvelles** lignes sont aussi poussées sur les appareils abonnés (`push_subscriptions`, un abonnement par navigateur, RLS) via [`src/lib/push/server.ts`](src/lib/push/server.ts) (`web-push`, protocole VAPID). Le service worker [`public/sw.js`](public/sw.js) affiche la notification et ouvre l'écran concerné au clic. Réglage et test : Paramètres → « Notifications push » ([`src/components/settings/push-settings.tsx`](src/components/settings/push-settings.tsx)).
+
+| Variable | Rôle |
+| --- | --- |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | clé publique VAPID (envoyée au navigateur pour s'abonner) |
+| `VAPID_PRIVATE_KEY` | clé privée VAPID, serveur uniquement |
+| `VAPID_SUBJECT` | contact `mailto:` exigé par le protocole |
+
+Générer une paire : `node -e "console.log(require('web-push').generateVAPIDKeys())"`. Changer les clés invalide tous les abonnements existants.
+
+Contraintes plateformes : HTTPS obligatoire (localhost accepté), iPhone/iPad uniquement en PWA installée sur l'écran d'accueil (iOS 16.4+), Android/Chrome/Edge/Firefox directement dans le navigateur ou en PWA.
+
 ## Export
 
 Depuis Paramètres → « Recevoir mon rapport par e-mail » ou en bas du Rapport du mois. L'action principale (`emailReport` dans [`src/actions/export.ts`](src/actions/export.ts)) génère les deux formats côté serveur et les envoie **sur l'adresse du compte uniquement**, avec un objet (« Ton rapport MONY · période ») et un message HTML/texte résumant revenus, dépenses, épargne, reste et la liste des pièces jointes ([`src/lib/report/email.ts`](src/lib/report/email.ts)). L'envoi passe par l'API Brevo ([`src/lib/mail/brevo.ts`](src/lib/mail/brevo.ts)) :

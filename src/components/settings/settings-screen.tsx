@@ -10,6 +10,7 @@ import { saveSettings } from "@/actions/settings";
 import { signOut } from "@/actions/auth";
 import { useAction } from "@/hooks/use-action";
 import { ExportPanel } from "./export-panel";
+import { PushSettings } from "./push-settings";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Toggle } from "@/components/ui/primitives";
@@ -120,6 +121,8 @@ export function SettingsScreen({
         </span>
         <ChevronRight className="h-4 w-4 text-fg-subtle" />
       </Link>
+
+      <PushSettings />
 
       <ExportPanel email={email} transactions={transactions} categories={categories} goals={goals} debts={debts} />
 

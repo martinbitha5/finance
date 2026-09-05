@@ -5,8 +5,9 @@ import { useEffect } from "react";
 const TZ_COOKIE = "mony_tz";
 
 /**
- * Registers the service worker and stores the browser timezone in a cookie so that
- * the server computes "today" in the user's calendar day.
+ * Registers the service worker (offline shell + Web Push) and stores the browser timezone in a
+ * cookie so that the server computes "today" in the user's calendar day.
+ * Registered in development too: push notifications need the worker to be installed.
  */
 export function PwaRegistrar() {
   useEffect(() => {
@@ -18,7 +19,7 @@ export function PwaRegistrar() {
     } catch {
       /* ignore */
     }
-    if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
+    if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => undefined);
     }
   }, []);
