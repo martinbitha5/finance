@@ -3,15 +3,43 @@
  * correspond à une entreprise connue, on affiche son vrai logo à la place de l'emoji
  * de catégorie. Le logo est le favicon officiel du domaine, servi par Google
  * (https://www.google.com/s2/favicons) — aucune clé d'API, et repli sur l'emoji
- * si l'image ne charge pas (hors ligne, marque inconnue…).
+ * si l'image ne charge pas (hors ligne, marque inconnue…). Les charges génériques
+ * (salaire, transport, loyer…) reçoivent une icône vectorielle colorée.
  */
 
+import type { LucideIcon } from "lucide-react";
+import { Banknote, Bus, Car, Droplets, Dumbbell, Fuel, GraduationCap, Home, Landmark, Shield, ShoppingCart, Smartphone, Stethoscope, Wifi, Zap } from "lucide-react";
+
 export interface Brand {
-  /** Domaine dont on récupère le favicon officiel. */
-  domain: string;
-  /** Couleur de la marque, utilisée pour teinter la bulle. */
+  /** Domaine dont on récupère le favicon officiel (marques uniquement). */
+  domain?: string;
+  /** Icône vectorielle pour les charges génériques sans marque (salaire, transport…). */
+  icon?: LucideIcon;
+  /** Couleur de la marque ou du thème, utilisée pour teinter la bulle. */
   color: string;
 }
+
+/**
+ * Charges génériques sans marque : icône vectorielle + couleur de thème.
+ * Testées après les marques, pour que « Uber » gagne sur « transport ».
+ */
+const GENERICS: Array<Brand & { keys: string[] }> = [
+  { keys: ["salaire", "salary", "paie", "paye"], icon: Banknote, color: "#22C55E" },
+  { keys: ["transport", "taxi", "bus", "moto", "metro", "tram", "navette"], icon: Bus, color: "#F59E0B" },
+  { keys: ["loyer", "rent", "logement", "maison"], icon: Home, color: "#8B5CF6" },
+  { keys: ["internet", "wifi", "connexion", "fibre", "box"], icon: Wifi, color: "#3B82F6" },
+  { keys: ["telephone", "phone", "forfait", "mobile", "credit telephonique"], icon: Smartphone, color: "#0EA5E9" },
+  { keys: ["electricite", "courant", "snel", "energie"], icon: Zap, color: "#EAB308" },
+  { keys: ["eau", "regideso"], icon: Droplets, color: "#38BDF8" },
+  { keys: ["essence", "carburant", "fuel", "gasoil"], icon: Fuel, color: "#F97316" },
+  { keys: ["voiture", "auto", "parking"], icon: Car, color: "#64748B" },
+  { keys: ["courses", "marche", "supermarche", "epicerie", "nourriture"], icon: ShoppingCart, color: "#10B981" },
+  { keys: ["assurance", "mutuelle"], icon: Shield, color: "#0D9488" },
+  { keys: ["sante", "medecin", "pharmacie", "hopital"], icon: Stethoscope, color: "#EC4899" },
+  { keys: ["gym", "sport", "fitness", "salle de sport", "muscu"], icon: Dumbbell, color: "#EF4444" },
+  { keys: ["ecole", "scolaire", "universite", "etudes", "formation", "cours"], icon: GraduationCap, color: "#6366F1" },
+  { keys: ["banque", "frais bancaires", "compte"], icon: Landmark, color: "#0F766E" },
+];
 
 /** Les clés sont en forme normalisée : minuscules, sans accents, mots séparés par des espaces. */
 const BRANDS: Array<Brand & { keys: string[] }> = [
@@ -95,12 +123,12 @@ function normalize(s: string) {
     .trim();
 }
 
-/** Retrouve la marque d'après un nom libre ("Netflix", "Abonnement Spotify Duo"…). */
+/** Retrouve la marque ou le visuel générique d'après un nom libre ("Netflix", "Transport Quotidien"…). */
 export function brandFor(name: string | null | undefined): Brand | null {
   if (!name) return null;
   const n = ` ${normalize(name)} `;
-  for (const b of BRANDS) {
-    if (b.keys.some((k) => n.includes(` ${k} `))) return { domain: b.domain, color: b.color };
+  for (const b of [...BRANDS, ...GENERICS]) {
+    if (b.keys.some((k) => n.includes(` ${k} `))) return { domain: b.domain, icon: b.icon, color: b.color };
   }
   return null;
 }

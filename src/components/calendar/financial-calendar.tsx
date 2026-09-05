@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Banknote, ChevronLeft, ChevronRight, type LucideIcon } from "lucide-react";
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameMonth, parseISO, startOfMonth, startOfWeek, subMonths } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { Category, Debt, IncomeSource, RecurringExpense, SavingsGoal, Transaction } from "@/lib/finance/types";
@@ -18,6 +18,7 @@ interface Event {
   date: string;
   icon: string;
   logo?: string;
+  lucide?: LucideIcon;
   color: string;
   label: string;
   amount: number | null;
@@ -58,11 +59,13 @@ export function FinancialCalendar({
       if (t.date < start || t.date >= end) continue;
       const cat = t.category_id ? catById.get(t.category_id) : undefined;
       const brand = t.type === "expense" ? brandFor(t.description) : null;
+      const isSalary = t.type === "income" && cat?.slug === "salary";
       out.push({
         id: t.id,
         date: t.date,
         icon: t.type === "saving" ? "🎯" : cat?.icon ?? (t.type === "income" ? "💰" : "💳"),
         logo: brand?.domain,
+        lucide: brand?.icon ?? (isSalary ? Banknote : undefined),
         color: t.type === "saving" ? "#EAB308" : brand?.color ?? cat?.color ?? (t.type === "income" ? "#22C55E" : "#94A3B8"),
         label: t.description || cat?.name || "",
         amount: (t.type === "income" ? 1 : -1) * convert(t.amount, t.currency, currency, rates),
@@ -77,14 +80,14 @@ export function FinancialCalendar({
       const brand = brandFor(r.name);
       for (const d of occurrencesInRange(r.next_date, r.frequency, r.day_of_month, { start: r.next_date > start ? r.next_date : start, end }, r.weekdays)) {
         if (d < today || postedRecurring.has(`${r.id}:${d}`)) continue;
-        out.push({ id: `${r.id}:${d}`, date: d, icon: cat?.icon ?? "🔁", logo: brand?.domain, color: brand?.color ?? cat?.color ?? "#94A3B8", label: r.name, amount: -convert(r.amount, r.currency, currency, rates), kind: "recurring", planned: true });
+        out.push({ id: `${r.id}:${d}`, date: d, icon: cat?.icon ?? "🔁", logo: brand?.domain, lucide: brand?.icon, color: brand?.color ?? cat?.color ?? "#94A3B8", label: r.name, amount: -convert(r.amount, r.currency, currency, rates), kind: "recurring", planned: true });
       }
     }
     for (const s of incomeSources) {
       if (!s.is_active || !s.is_recurring || !s.pay_day) continue;
       const d = toISODate(paydayInMonth(month, s.pay_day));
       const alreadyPosted = out.some((e) => e.kind === "salary" && e.date.slice(0, 7) === d.slice(0, 7));
-      if (d >= today && !alreadyPosted) out.push({ id: `salary:${d}`, date: d, icon: "💰", color: "#22C55E", label: s.label, amount: convert(s.amount, s.currency, currency, rates), kind: "salary", planned: true });
+      if (d >= today && !alreadyPosted) out.push({ id: `salary:${d}`, date: d, icon: "💰", lucide: Banknote, color: "#22C55E", label: s.label, amount: convert(s.amount, s.currency, currency, rates), kind: "salary", planned: true });
     }
     for (const g of goals) {
       if (g.target_date && g.target_date >= start && g.target_date < end && !g.is_archived) {
@@ -179,7 +182,7 @@ function EventList({ events, currency, showDate }: { events: Event[]; currency: 
     <ul className="card p-0 overflow-hidden divide-y divide-border">
       {events.map((e) => (
         <li key={e.id} className="flex items-center gap-3 px-4 py-3">
-          <IconBubble icon={e.icon} color={e.color} size="sm" logo={e.logo} />
+          <IconBubble icon={e.icon} color={e.color} size="sm" logo={e.logo} lucide={e.lucide} />
           <div className="flex-1 min-w-0">
             <div className="font-semibold truncate">{e.label}</div>
             <div className="text-xs text-fg-muted">

@@ -1,7 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/signup", "/auth", "/manifest.webmanifest", "/sw.js", "/icons", "/offline"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/signup",
+  "/auth",
+  "/manifest.webmanifest",
+  "/sw.js",
+  "/icons",
+  "/offline",
+  "/bienvenue",
+  "/conditions",
+  "/confidentialite",
+];
 
 function isPublic(pathname: string) {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
@@ -43,8 +54,14 @@ export async function proxy(request: NextRequest) {
 
   if (!user && !isPublic(pathname)) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("next", pathname);
+    // Visitors landing on the root discover the product first; deep links go to login.
+    if (pathname === "/") {
+      url.pathname = "/bienvenue";
+      url.search = "";
+    } else {
+      url.pathname = "/login";
+      url.searchParams.set("next", pathname);
+    }
     return NextResponse.redirect(url);
   }
 

@@ -1,4 +1,5 @@
 import * as React from "react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { formatMoney } from "@/lib/format";
@@ -87,16 +88,17 @@ export function Money({
 }
 
 /* ---------- Icon bubble ---------- */
-export function IconBubble({ icon, color, logo, size = "md", className }: { icon: string; color?: string; logo?: string | null; size?: "sm" | "md" | "lg"; className?: string }) {
+export function IconBubble({ icon, color, logo, lucide: Lucide, size = "md", className }: { icon: string; color?: string; logo?: string | null; lucide?: LucideIcon | null; size?: "sm" | "md" | "lg"; className?: string }) {
   const s = size === "sm" ? "h-9 w-9 text-base rounded-xl" : size === "lg" ? "h-14 w-14 text-2xl rounded-2xl" : "h-11 w-11 text-xl rounded-2xl";
   const img = size === "sm" ? "h-5 w-5 rounded-[5px]" : size === "lg" ? "h-8 w-8 rounded-lg" : "h-6 w-6 rounded-md";
+  const glyph = size === "sm" ? "h-[18px] w-[18px]" : size === "lg" ? "h-7 w-7" : "h-5 w-5";
   return (
     <div
       className={cn("inline-flex items-center justify-center shrink-0", s, className)}
       style={{ background: color ? `color-mix(in oklab, ${color} 18%, transparent)` : "var(--surface-2)" }}
       aria-hidden
     >
-      {logo ? <BrandLogo domain={logo} fallback={icon} className={img} /> : icon}
+      {logo ? <BrandLogo domain={logo} fallback={icon} className={img} /> : Lucide ? <Lucide className={glyph} strokeWidth={2.25} style={{ color }} /> : icon}
     </div>
   );
 }

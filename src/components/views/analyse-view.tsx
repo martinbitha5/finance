@@ -66,7 +66,13 @@ export function AnalyseView() {
                 return (
                 <li key={r.id} className="flex items-center gap-3 text-sm">
                   <span className="w-7 flex items-center justify-center text-lg" aria-hidden>
-                    {brand ? <BrandLogo domain={brand.domain} fallback={r.icon} className="h-6 w-6 rounded-md" /> : r.icon}
+                    {brand?.domain ? (
+                      <BrandLogo domain={brand.domain} fallback={r.icon} className="h-6 w-6 rounded-md" />
+                    ) : brand?.icon ? (
+                      <brand.icon className="h-5 w-5" strokeWidth={2.25} style={{ color: brand.color }} />
+                    ) : (
+                      r.icon
+                    )}
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="block font-semibold truncate">{r.name}</span>

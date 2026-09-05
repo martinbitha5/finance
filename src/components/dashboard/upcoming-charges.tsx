@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { Banknote, ChevronRight } from "lucide-react";
 import type { UpcomingCharge } from "@/lib/finance/types";
 import type { Currency } from "@/lib/constants";
 import { formatMoney, formatDayLabel } from "@/lib/format";
@@ -39,7 +39,7 @@ export function UpcomingCharges({ charges, currency, total, salary }: { charges:
           ))}
           {salary ? (
             <li className="flex items-center gap-3 py-2.5 first:pt-0">
-              <IconBubble icon="💰" color="#22C55E" size="sm" />
+              <IconBubble icon="💰" color="#22C55E" size="sm" lucide={Banknote} />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold truncate">Salaire</div>
                 <div className="text-xs text-fg-muted capitalize">{formatDayLabel(salary.date)}</div>
@@ -68,7 +68,7 @@ function ChargeRow({ c, currency, afterPayday = false }: { c: UpcomingCharge; cu
   const brand = brandFor(c.name);
   return (
     <li className="flex items-center gap-3 py-2.5 first:pt-0">
-      <IconBubble icon={c.icon} color={brand?.color ?? c.color} size="sm" logo={brand?.domain} />
+      <IconBubble icon={c.icon} color={brand?.color ?? c.color} size="sm" logo={brand?.domain} lucide={brand?.icon} />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-semibold truncate">{c.name}</div>
         <div className="text-xs text-fg-muted">
