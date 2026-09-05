@@ -8,93 +8,93 @@
 
 <p align="center"><strong>Ton argent, en clair.</strong></p>
 
-Application web de gestion financière personnelle, mobile-first, installable en PWA.
-Elle répond à une question simple : **où part mon argent, et combien puis-je dépenser aujourd'hui jusqu'à la prochaine paie ?**
+MONY est une application qui t'aide à comprendre où va ton argent et à savoir, chaque jour, combien tu peux dépenser sans te mettre en difficulté avant la prochaine paie.
 
-## Stack
+Pas de tableaux compliqués, pas de jargon bancaire. Tu notes ce qui entre et ce qui sort, et MONY te dit ce que ça veut dire pour toi.
 
-- **Next.js 16** (App Router, Server Components, Server Actions) · **TypeScript** · **Tailwind CSS v4**
-- **Supabase** (Auth + PostgreSQL + Row Level Security)
-- **PWA** : manifest, service worker, icônes, mode standalone iOS/Android
-- Recharts (graphiques), Zod (validation serveur), date-fns, sonner (toasts), next-themes (clair/sombre)
+---
 
-## Démarrer
+## Le problème qu'on résout
 
-```bash
-npm install
-cp .env.example .env.local   # puis renseigne l'URL et la clé publishable Supabase
-npm run dev
-```
+Entre le loyer, les abonnements, les courses et les petites dépenses du quotidien, on perd vite le fil. On se retrouve souvent à se demander en fin de mois : « Mais où est passé mon salaire ? »
 
-Ouvre <http://localhost:3000>. Sur téléphone (même Wi-Fi) : `http://<ip-du-pc>:3000`.
+MONY répond à cette question avant qu'elle ne se pose. L'idée est simple : à tout moment, tu sais exactement ce qu'il te reste **vraiment** à dépenser, une fois tes charges, tes remboursements et ton épargne mis de côté.
 
-### Variables d'environnement
+---
 
-| Variable | Rôle |
-| --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | URL du projet Supabase |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Clé publique (jamais la service role key) |
-| `NEXT_PUBLIC_SITE_URL` | URL publique, utilisée pour les liens de confirmation d'email |
+## Ce que MONY fait pour toi
 
-### Base de données
+### Un chiffre clé : ce que tu peux dépenser aujourd'hui
 
-Le schéma complet est dans [`supabase/migrations`](supabase/migrations). Il est déjà appliqué au projet Supabase « finance ».
-Pour un nouveau projet : colle le contenu des fichiers dans l'éditeur SQL Supabase (dans l'ordre), ou `supabase db push`.
+MONY calcule ton **reste à dépenser** en tenant compte de tout ce qui doit encore sortir de ton compte avant ta prochaine paie : loyer, abonnements, factures, remboursements, et l'épargne que tu t'es fixée. Ce montant est ensuite réparti sur les jours restants pour te donner un **budget quotidien** clair.
 
-Tables : `profiles`, `settings`, `accounts`, `categories`, `income`, `recurring_expenses`, `savings_goals`, `transactions`, `budgets`, `notifications`.
-Chaque table est protégée par RLS (`auth.uid() = user_id`). Un trigger sur `auth.users` crée le profil, les réglages, un compte et les catégories par défaut à l'inscription.
+Tu ouvres l'application, tu vois un seul chiffre, et tu sais où tu en es.
 
-> Supabase demande par défaut une confirmation d'email à l'inscription. Pour tester plus vite : Dashboard → Authentication → Providers → Email → désactive « Confirm email ».
-> En production, renseigne aussi `Site URL` et `Redirect URLs` (`https://ton-domaine/auth/callback`).
+### Un rythme adapté à ta paie
 
-## Structure
+Tout le monde n'est pas payé le premier du mois. Tu indiques ton jour de paie, et MONY organise tes finances autour de ce cycle, du dernier salaire reçu au prochain. Si tu n'as pas de jour de paie fixe, l'application fonctionne simplement au mois calendaire.
 
-```
-src/
-  app/                 routes (App Router)
-    (auth)/            login, signup
-    (app)/             écrans authentifiés : accueil, analyse, ajouter, objectifs, plus, transactions, budgets, revenus, récurrents, rapport, calendrier, notifications, paramètres
-    onboarding/        configuration initiale (salaire, date de paie, charges)
-    auth/callback/     échange du code de confirmation d'email
-    manifest.ts        manifest PWA
-  actions/             Server Actions (validation Zod + Supabase, RLS)
-  services/            accès données côté serveur (getFinanceData, notifications, "today" fuseau utilisateur)
-  lib/finance/         moteur de calcul pur : engine.ts (solde, cycle de paie, allocation quotidienne, budgets, objectifs, projections), insights.ts (analyse), cycles.ts, currency.ts
-  lib/validation/      schémas Zod
-  lib/supabase/        clients navigateur / serveur + types générés
-  components/          UI (ui/), layout (bottom nav mobile, sidebar desktop), dashboard, transactions, budgets, goals, income, recurring, calendar, settings, charts
-  proxy.ts             rafraîchit la session Supabase et protège les routes
-public/sw.js           service worker (app shell, pages network-first, page hors ligne)
-scripts/generate-icons.mjs  génère les icônes PWA et les assets de marque
-```
+### Tes charges fixes, gérées automatiquement
 
-## Logique financière (résumé)
+Loyer, électricité, internet, abonnements : tu les enregistres une fois, avec leur fréquence. MONY les inscrit ensuite tout seul aux bonnes dates et les anticipe dans ton reste à dépenser. Plus de mauvaise surprise le jour où le prélèvement tombe.
 
-- **Cycle de paie** : de la dernière date de paie (incluse) à la prochaine (exclue). Sans salaire configuré, le mois calendaire.
-- **Solde** = comptes + revenus − dépenses − épargne (transactions jusqu'à aujourd'hui).
-- **Argent libre** = solde − charges récurrentes à venir avant la paie − épargne planifiée restante (contributions mensuelles des objectifs non encore versées).
-- **Montant quotidien** = argent libre ÷ jours restants avant la paie. Jamais arbitraire.
-- **Projection** = argent libre − rythme moyen quotidien (hors charges fixes) × jours restants.
-- **Budgets** et **rapport** : mois calendaire. Comparaisons « vs mois dernier » faites à date comparable.
-- Les **charges récurrentes** génèrent automatiquement la dépense à chaque échéance.
-- **Dettes** (`debts`) : ce que je dois (`owed`) et ce qu'on me doit (`lent`). Les remboursements sont des transactions liées (`transactions.debt_id`) ; la dette passe « liquidée » quand ils atteignent le capital. La mensualité prévue non encore payée dans le cycle est retirée de l'argent libre. Pour chaque dette : restant, % remboursé, jours/mois avant l'échéance, mensualité requise pour tenir la date, date de liquidation estimée au rythme prévu.
-- **Multi-devises** : les montants sont stockés dans leur devise ; l'affichage convertit avec les taux définis dans Paramètres et affiche toujours le taux utilisé.
+### Des budgets par catégorie
 
-## Mode démo
+Tu peux te fixer une limite pour l'alimentation, les sorties, le transport ou n'importe quelle catégorie de ton choix. MONY te prévient quand tu approches de la limite, et te le dit clairement quand tu l'as dépassée.
 
-Paramètres → « Charger les données de démonstration » (salaire 650 $, loyer, internet, Netflix, budgets, objectifs, ~2 mois de dépenses). « Effacer les données de démo » ne supprime que ces lignes.
+### Des objectifs d'épargne concrets
 
-## Installer sur téléphone
+Un téléphone, un voyage, une voiture, un fonds d'urgence ou tout autre projet : tu définis un montant cible et, si tu veux, une date. MONY suit ta progression, te dit si tu es dans les temps ou en retard, et calcule combien mettre de côté chaque mois pour y arriver.
 
-- **iPhone** : Safari → Partager → « Sur l'écran d'accueil ».
-- **Android** : Chrome → menu ⋮ → « Installer l'application ».
+### Tes dettes, sous contrôle
 
-## Scripts
+Ce que tu dois et ce qu'on te doit, au même endroit. Pour chaque dette, MONY suit ce qu'il reste à rembourser, la part déjà payée, et te dit combien verser chaque mois pour tenir ta date limite. Les remboursements prévus sont automatiquement pris en compte dans ton reste à dépenser.
 
-```bash
-npm run dev       # développement
-npm run build     # build de production
-npm run start     # serveur de production
-npm run lint      # ESLint
-node scripts/generate-icons.mjs   # régénérer les icônes
-```
+### Des conseils basés sur tes vrais chiffres
+
+MONY analyse tes données et te parle simplement, par exemple :
+
+- « Si tu continues à ce rythme, il te restera environ 45 $ avant ta prochaine paie. »
+- « Tu as dépensé 32 % de ton salaire en restaurants ce mois-ci. »
+- « Tes dépenses ont baissé de 15 % par rapport au mois dernier. »
+- « Objectif atteint : Nouveau téléphone ! »
+
+Rien n'est inventé. Chaque message est calculé à partir de ce que tu as réellement saisi.
+
+### Une vue d'ensemble sur plusieurs mois
+
+Tu peux comparer ce mois-ci au mois dernier, voir tes plus grosses dépenses, la répartition par catégorie, un calendrier de tes échéances, et suivre l'évolution de tes revenus, dépenses et épargne sur les six derniers mois.
+
+---
+
+## Pensé pour la vie réelle
+
+- **Sur ton téléphone** : MONY s'installe comme une application, sur iPhone et Android, et fonctionne même quand le réseau est capricieux.
+- **Plusieurs devises** : dollar américain, franc congolais, euro et livre sterling. Tu peux mélanger les devises dans tes comptes et tes dépenses, MONY fait la conversion.
+- **Tous les moyens de paiement** : cash, carte, Mobile Money, virement.
+- **Plusieurs sources de revenus** : salaire, bonus, freelance, business, cadeaux.
+- **Mode clair ou sombre**, selon tes préférences.
+- **Tes données t'appartiennent** : chaque utilisateur a son espace privé et sécurisé, accessible uniquement avec son compte.
+
+---
+
+## Essayer sans rien saisir
+
+Un mode démonstration te permet de découvrir l'application avec des données fictives : un salaire, un loyer, quelques abonnements, des budgets, des objectifs et deux mois de dépenses. Tu peux tout effacer en un clic quand tu veux commencer avec tes vrais chiffres.
+
+---
+
+## À qui s'adresse MONY ?
+
+À toute personne qui veut reprendre le contrôle de son argent sans devenir comptable. Que tu sois salarié, freelance, étudiant ou entrepreneur, si tu t'es déjà demandé « est-ce que je peux me permettre ça ? », MONY est fait pour toi.
+
+---
+
+## Installer MONY sur ton téléphone
+
+- **iPhone** : ouvre MONY dans Safari, touche « Partager », puis « Sur l'écran d'accueil ».
+- **Android** : ouvre MONY dans Chrome, touche le menu, puis « Installer l'application ».
+
+---
+
+*Projet développé par Martin Bitha. Pour la documentation technique, voir [DEVELOPPEMENT.md](DEVELOPPEMENT.md).*
