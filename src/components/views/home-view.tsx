@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
+import { greeting } from "@/lib/format";
 
 export function HomeView() {
   const data = useFinanceData();
@@ -28,7 +29,7 @@ export function HomeView() {
   return (
     <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:items-start md:gap-5">
       <div className="md:col-span-2">
-        <PageHeader title={`Bonjour${name ? ` ${name}` : ""} 👋`} question="Où en sont mes finances ?" unread={data.unreadNotifications} className="pb-0" />
+        <PageHeader title={`${greeting()}${name ? ` ${name}` : ""} 👋`} question="Où en sont mes finances ?" unread={data.unreadNotifications} className="pb-0" />
       </div>
 
       <BalanceCard s={s} />

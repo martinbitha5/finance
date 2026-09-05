@@ -9,6 +9,7 @@ import { APP_NAME } from "@/lib/constants";
 import { signOut } from "@/actions/auth";
 import { ThemeToggle } from "./theme-toggle";
 import { LogoMark } from "@/components/brand/logo";
+import { greeting } from "@/lib/format";
 
 export function Sidebar({ name, unread }: { name: string; unread: number }) {
   const pathname = usePathname();
@@ -19,7 +20,7 @@ export function Sidebar({ name, unread }: { name: string; unread: number }) {
         <LogoMark size={40} className="rounded-2xl shadow-soft" />
         <span>
           <span className="block text-lg font-extrabold tracking-tight leading-none">{APP_NAME}</span>
-          <span className="block text-[11px] text-fg-subtle mt-1">Bonjour, {name}</span>
+          <span className="block text-[11px] text-fg-subtle mt-1">{greeting()}, {name}</span>
         </span>
       </Link>
 

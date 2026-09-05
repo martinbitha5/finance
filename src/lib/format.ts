@@ -65,3 +65,9 @@ export function formatMonth(d: Date) {
 export function pluralDays(n: number) {
   return `${n} jour${n > 1 ? "s" : ""}`;
 }
+
+/** « Bonjour » en journée, « Bonsoir » à partir de 18 h (et jusqu'à 5 h du matin). */
+export function greeting(now = new Date()) {
+  const h = now.getHours();
+  return h >= 18 || h < 5 ? "Bonsoir" : "Bonjour";
+}
