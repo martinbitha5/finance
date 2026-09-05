@@ -1,7 +1,7 @@
 import "server-only";
 import { revalidatePath } from "next/cache";
 import type { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { fieldErrors } from "@/lib/validation/schemas";
 
 export type ActionResult<T = null> =
@@ -9,10 +9,7 @@ export type ActionResult<T = null> =
   | { ok: false; error: string; fields?: Record<string, string> };
 
 export async function requireUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [supabase, user] = await Promise.all([createClient(), getUser()]);
   if (!user) throw new Error("Non authentifié");
   return { supabase, user };
 }

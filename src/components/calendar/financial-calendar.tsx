@@ -120,7 +120,7 @@ export function FinancialCalendar({
                 type="button"
                 onClick={() => setSelected(iso)}
                 className={cn(
-                  "relative aspect-square rounded-xl flex flex-col items-center justify-center text-sm font-semibold press transition-colors",
+                  "relative aspect-square sm:aspect-[5/4] rounded-xl flex flex-col items-center justify-center text-sm font-semibold press transition-colors",
                   !inMonth && "opacity-30",
                   selected === iso ? "bg-ink text-ink-fg dark:bg-fg dark:text-bg" : iso === today ? "bg-accent/20" : "hover:bg-surface-2",
                 )}
@@ -135,7 +135,7 @@ export function FinancialCalendar({
                 ) : (
                   <span className="h-1.5 mt-0.5" />
                 )}
-                {net !== 0 && inMonth ? <span className={cn("absolute bottom-0.5 text-[8px] tabular", net > 0 ? "text-positive" : "opacity-60")}>{net > 0 ? "+" : ""}{Math.round(net)}</span> : null}
+                {net !== 0 && inMonth ? <span className={cn("hidden sm:block absolute bottom-0.5 text-[9px] tabular leading-none", net > 0 ? "text-positive" : "opacity-60")}>{net > 0 ? "+" : ""}{Math.round(net)}</span> : null}
               </button>
             );
           })}

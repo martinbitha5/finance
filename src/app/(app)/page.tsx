@@ -26,8 +26,8 @@ export default async function HomePage() {
   const recent = snapshot.transactions.filter((t) => t.date <= s.today).slice(0, 5);
 
   return (
-    <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5">
-      <div className="lg:col-span-2">
+    <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:items-start md:gap-5">
+      <div className="md:col-span-2">
         <PageHeader title={`Bonjour${name ? ` ${name}` : ""} 👋`} question="Où en sont mes finances ?" unread={data.unreadNotifications} className="pb-0" />
       </div>
 
@@ -36,7 +36,7 @@ export default async function HomePage() {
 
       {!hasAnyData ? (
         <EmptyState
-          className="lg:col-span-2"
+          className="md:col-span-2"
           icon="✨"
           title="Commence par une première dépense"
           description="Ou charge les données de démonstration pour voir MONY en action tout de suite."

@@ -38,7 +38,7 @@ export function GoalsScreen({ goals, currency, today, totalSaved, plannedMonthly
       {goals.length === 0 ? (
         <EmptyState icon="🎯" title="Aucun objectif" description="Un téléphone, un voyage, un fonds d'urgence… MONY calcule combien mettre de côté chaque mois." action={<Button onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> Créer un objectif</Button>} />
       ) : (
-        <ul className="flex flex-col gap-3 stagger">
+        <ul className="flex flex-col gap-3 stagger md:grid md:grid-cols-2 md:items-start">
           {goals.map((g) => {
             const reached = g.state === "reached";
             return (
@@ -46,23 +46,21 @@ export function GoalsScreen({ goals, currency, today, totalSaved, plannedMonthly
                 <div className="flex items-center gap-3">
                   <IconBubble icon={g.goal.icon} color={reached ? "#22C55E" : "#EAB308"} size="lg" />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold truncate">{g.goal.name}</span>
-                      {reached ? <Badge tone="positive">Atteint</Badge> : g.state === "behind" ? <Badge tone="warning">En retard</Badge> : g.state === "on_track" ? <Badge tone="info">En bonne voie</Badge> : null}
-                    </div>
-                    <div className="text-sm text-fg-muted">
+                    <div className="font-bold truncate">{g.goal.name}</div>
+                    <div className="text-sm text-fg-muted truncate">
                       Objectif : <span className="tabular font-semibold text-fg">{formatMoney(g.goal.target_amount, g.goal.currency)}</span>
                       {g.goal.target_date ? <> · {formatDate(g.goal.target_date, "MMM yyyy")}</> : null}
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <div className="text-xl font-extrabold tabular tracking-tight">{formatPercent(g.percent)}</div>
                   </div>
                 </div>
                 <Progress value={g.percent} color={reached ? "var(--positive)" : "linear-gradient(90deg, var(--accent), var(--accent-2))"} className="mt-3" size="lg" />
-                <div className="mt-2 flex justify-between text-[13px]">
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
+                  {reached ? <Badge tone="positive">Atteint</Badge> : g.state === "behind" ? <Badge tone="warning">En retard</Badge> : g.state === "on_track" ? <Badge tone="info">En bonne voie</Badge> : null}
                   <span className="text-fg-muted">Épargné : <b className="text-fg tabular">{formatMoney(g.saved, currency)}</b></span>
-                  {!reached ? <span className="text-fg-muted">Reste : <b className="text-fg tabular">{formatMoney(g.remaining, currency)}</b></span> : null}
+                  {!reached ? <span className="text-fg-muted ml-auto">Reste : <b className="text-fg tabular">{formatMoney(g.remaining, currency)}</b></span> : null}
                 </div>
                 {!reached && g.requiredMonthly !== null ? (
                   <p className={cn("mt-2 text-[13px] font-semibold", g.state === "behind" ? "text-warning" : "text-fg-muted")}>

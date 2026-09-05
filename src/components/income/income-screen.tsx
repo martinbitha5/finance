@@ -47,17 +47,17 @@ export function IncomeScreen({ s, sources }: { s: FinanceSummary; sources: Incom
         </div>
         {s.salary.configured ? (
           <div className="mt-4 grid grid-cols-3 gap-2">
-            <div className="rounded-2xl bg-white/10 p-3">
-              <div className="text-[11px] text-ink-muted">Prochaine paie</div>
-              <div className="font-bold text-sm mt-0.5 inline-flex items-center gap-1"><CalendarClock className="h-3.5 w-3.5" /> {formatDate(s.cycle.nextPayday, "d MMM")}</div>
+            <div className="rounded-2xl bg-white/10 px-2.5 py-3 min-w-0">
+              <div className="text-[11px] text-ink-muted whitespace-nowrap">Paie le</div>
+              <div className="font-bold text-sm mt-0.5 inline-flex items-center gap-1 whitespace-nowrap"><CalendarClock className="h-3.5 w-3.5 shrink-0" /> {formatDate(s.cycle.nextPayday, "d MMM")}</div>
             </div>
-            <div className="rounded-2xl bg-white/10 p-3">
-              <div className="text-[11px] text-ink-muted">Jours restants</div>
+            <div className="rounded-2xl bg-white/10 px-2.5 py-3 min-w-0">
+              <div className="text-[11px] text-ink-muted whitespace-nowrap">Jours restants</div>
               <div className="font-bold text-sm mt-0.5 tabular">{s.cycle.daysRemaining}</div>
             </div>
-            <div className="rounded-2xl bg-white/10 p-3">
-              <div className="text-[11px] text-ink-muted">À conserver</div>
-              <div className="font-bold text-sm mt-0.5 tabular">{formatMoney(s.remainingCharges + s.remainingSavings, s.currency)}</div>
+            <div className="rounded-2xl bg-white/10 px-2.5 py-3 min-w-0">
+              <div className="text-[11px] text-ink-muted whitespace-nowrap">À conserver</div>
+              <div className="font-bold text-sm mt-0.5 tabular truncate">{formatMoney(s.remainingCharges + s.remainingSavings, s.currency)}</div>
             </div>
           </div>
         ) : null}
@@ -68,7 +68,7 @@ export function IncomeScreen({ s, sources }: { s: FinanceSummary; sources: Incom
           <CardTitle>Ce cycle de paie</CardTitle>
           <div className="grid grid-cols-2 gap-2.5">
             <Stat label="Revenus reçus" value={formatMoney(s.cycle.income, s.currency)} tone="positive" sub={`depuis le ${formatDate(s.cycle.start, "d MMM")}`} />
-            <Stat label="Par jour" value={formatMoney(s.dailyAllowance, s.currency)} sub="dépense recommandée" />
+            <Stat label="Par jour" value={formatMoney(s.dailyAllowance, s.currency)} sub="recommandé" />
           </div>
           {s.cycle.salaryReceived === 0 ? (
             <div className="mt-3 rounded-2xl bg-warning/10 border border-warning/30 px-4 py-3 text-sm">

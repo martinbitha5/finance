@@ -3,10 +3,10 @@
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import type { CategorySpend } from "@/lib/finance/types";
 
-export function Donut({ data, size = 180, center }: { data: CategorySpend[]; size?: number; center?: React.ReactNode }) {
+export function Donut({ data, size = 180, center, className }: { data: CategorySpend[]; size?: number; center?: React.ReactNode; className?: string }) {
   const rows = data.filter((d) => d.amount > 0);
   return (
-    <div className="relative mx-auto" style={{ width: size, height: size }}>
+    <div className={`relative mx-auto ${className ?? ""}`} style={{ width: size, height: size }}>
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie

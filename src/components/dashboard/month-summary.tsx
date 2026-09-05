@@ -25,7 +25,7 @@ export function MonthSummary({ s }: { s: FinanceSummary }) {
         <Stat label="Revenus" value={formatMoney(period.income, cur)} tone="positive" />
         <Stat label="Dépenses" value={formatMoney(period.expenses, cur)} tone="negative" />
         <Stat label="Épargne" value={formatMoney(period.savings, cur)} />
-        <Stat label="Disponible" value={formatMoney(period.available, cur)} tone={period.available < 0 ? "negative" : undefined} sub={useCycle ? "revenus − dépenses − épargne" : undefined} />
+        <Stat label="Disponible" value={formatMoney(period.available, cur)} tone={period.available < 0 ? "negative" : undefined} sub={useCycle ? "après épargne" : undefined} />
       </div>
       <div className="mt-4">
         <div className="flex items-center justify-between px-1 mb-1">

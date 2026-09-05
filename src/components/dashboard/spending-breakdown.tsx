@@ -46,11 +46,12 @@ export function SpendingBreakdown({
       >
         {title}
       </CardTitle>
-      <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-8">
         {showDonut ? (
           <Donut
             data={data}
             size={168}
+            className="sm:shrink-0"
             center={
               <>
                 <span className="text-[11px] font-semibold text-fg-muted">Total</span>

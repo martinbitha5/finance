@@ -33,10 +33,11 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  // Do not run code between createServerClient and getUser().
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Do not run code between createServerClient and getClaims().
+  // getClaims verifies the JWT locally against the project's public signing key (JWKS, cached
+  // in memory for 10 min), so this costs no round-trip to Supabase Auth on every request.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims?.sub ? data.claims : null;
 
   const { pathname } = request.nextUrl;
 

@@ -50,7 +50,7 @@ export function BudgetsScreen({ budgets, categories, currency, totalSpent, month
       {budgets.length === 0 ? (
         <EmptyState icon="🎚️" title="Aucun budget" description="Fixe une limite par catégorie et MONY te préviendra quand tu t'en approches." action={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Créer un budget</Button>} />
       ) : (
-        <ul className="flex flex-col gap-3 stagger">
+        <ul className="flex flex-col gap-3 stagger md:grid md:grid-cols-2 md:items-start">
           {budgets.map((b) => (
             <li key={b.budget.id} className="card p-4">
               <button type="button" className="w-full text-left" onClick={() => setEditing(b)}>

@@ -30,7 +30,8 @@ export function OnboardingFlow({ summary, categories, name, demoLoaded }: { summ
   const [custom, setCustom] = useState({ name: "", amount: "", slug: "subscriptions" });
   const [currency] = useState<Currency>(summary.currency);
   const add = useAction(createRecurring, { refresh: false });
-  const finish = useAction(completeOnboarding, { refresh: false, onSuccess: () => { router.replace("/"); router.refresh(); } });
+  // completeOnboarding revalidates the whole app, so "/" is fetched fresh by replace() alone.
+  const finish = useAction(completeOnboarding, { onSuccess: () => router.replace("/") });
   const catBySlug = new Map(categories.filter((c) => c.slug).map((c) => [c.slug as string, c.id]));
 
   async function saveCharges() {

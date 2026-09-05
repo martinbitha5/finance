@@ -19,10 +19,14 @@ export default async function AnalysePage() {
   const incomeRef = s.month.income || s.salary.amount;
 
   return (
-    <div className="flex flex-col gap-4">
-      <PageHeader title="Analyse" question="Où part mon argent ?" />
+    <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5">
+      <div className="lg:col-span-2">
+        <PageHeader title="Analyse" question="Où part mon argent ?" className="pb-0" />
+      </div>
 
-      <SpendingBreakdown data={s.month.byCategory} currency={cur} total={s.month.expenses} title={`Où va ton argent ? · ${s.month.label}`} />
+      <div className="lg:col-span-2">
+        <SpendingBreakdown data={s.month.byCategory} currency={cur} total={s.month.expenses} title={`Où va ton argent ? · ${s.month.label}`} />
+      </div>
 
       {s.month.byCategory.length > 0 && incomeRef > 0 ? (
         <section className="card p-5">
@@ -79,7 +83,7 @@ export default async function AnalysePage() {
       </section>
 
       {snapshot.transactions.length === 0 ? (
-        <p className="text-center text-sm text-fg-muted">Ajoute des dépenses pour voir apparaître ton analyse.</p>
+        <p className="text-center text-sm text-fg-muted lg:col-span-2">Ajoute des dépenses pour voir apparaître ton analyse.</p>
       ) : null}
     </div>
   );

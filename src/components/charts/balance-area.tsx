@@ -20,11 +20,12 @@ export function BalanceArea({ data, currency, height = 160 }: { data: BalancePoi
   const min = Math.min(...data.map((p) => p.balance), 0);
   const max = Math.max(...data.map((p) => p.balance), 1);
   const tickEvery = Math.max(1, Math.round(rows.length / 5));
+  const actualCount = rows.filter((r) => r.actual !== null).length;
 
   return (
-    <div style={{ height }} className="-mx-2">
+    <div style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+        <AreaChart data={rows} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
           <defs>
             <linearGradient id="balFill" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.45} />
@@ -38,6 +39,8 @@ export function BalanceArea({ data, currency, height = 160 }: { data: BalancePoi
             interval={tickEvery - 1}
             tickFormatter={(v: string) => formatDate(v, "d MMM")}
             tick={{ fontSize: 11 }}
+            padding={{ left: 18, right: 18 }}
+            tickMargin={6}
           />
           <YAxis hide domain={[min < 0 ? min * 1.1 : 0, max * 1.1]} />
           {min < 0 ? <ReferenceLine y={0} stroke="var(--negative)" strokeDasharray="3 3" /> : null}
@@ -55,7 +58,17 @@ export function BalanceArea({ data, currency, height = 160 }: { data: BalancePoi
               );
             }}
           />
-          <Area type="monotone" dataKey="actual" stroke="var(--accent)" strokeWidth={2.5} fill="url(#balFill)" dot={false} activeDot={{ r: 4 }} connectNulls={false} isAnimationActive />
+          <Area
+            type="monotone"
+            dataKey="actual"
+            stroke="var(--accent)"
+            strokeWidth={2.5}
+            fill="url(#balFill)"
+            dot={actualCount < 2 ? { r: 4, fill: "var(--accent)", stroke: "var(--surface)", strokeWidth: 2 } : false}
+            activeDot={{ r: 4 }}
+            connectNulls={false}
+            isAnimationActive
+          />
           <Area type="monotone" dataKey="projected" stroke="var(--fg-subtle)" strokeWidth={2} strokeDasharray="4 4" fill="transparent" dot={false} activeDot={{ r: 3 }} />
         </AreaChart>
       </ResponsiveContainer>

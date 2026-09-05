@@ -21,16 +21,19 @@ export default async function ReportPage() {
   const prev = monthOver ? s.previousMonth : s.previousMonthToDate;
   const change = monthOver ? s.monthChange.expensesPct : s.monthToDateChange.expensesPct;
   const prevLabel = monthOver ? s.previousMonth.label : `${s.previousMonth.label} (au ${dayOfMonth})`;
+  const prevShort = s.previousMonth.label.split(" ")[0].toLowerCase();
   const incomeChange = monthOver ? s.monthChange.incomePct : s.previousMonthToDate.income > 0 ? Math.round(((m.income - s.previousMonthToDate.income) / s.previousMonthToDate.income) * 100) : null;
 
   return (
-    <div className="flex flex-col gap-4">
-      <PageHeader title="Rapport du mois" question={m.label} back="/plus" />
+    <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5">
+      <div className="lg:col-span-2">
+        <PageHeader title="Rapport du mois" question={m.label} back="/plus" className="pb-0" />
+      </div>
 
       <section className="card p-5">
         <div className="grid grid-cols-2 gap-2.5">
-          <Stat label="Revenus" value={formatMoney(m.income, cur)} tone="positive" sub={pctSub(incomeChange, monthOver)} />
-          <Stat label="Dépenses" value={formatMoney(m.expenses, cur)} tone="negative" sub={pctSub(change, monthOver)} />
+          <Stat label="Revenus" value={formatMoney(m.income, cur)} tone="positive" sub={pctSub(incomeChange, prevShort)} />
+          <Stat label="Dépenses" value={formatMoney(m.expenses, cur)} tone="negative" sub={pctSub(change, prevShort)} />
           <Stat label="Épargne" value={formatMoney(m.savings, cur)} sub={m.income > 0 ? `${formatPercent(savingsRate)} des revenus` : undefined} />
           <Stat label="Reste" value={formatMoney(m.available, cur)} tone={m.available < 0 ? "negative" : undefined} />
         </div>
@@ -80,13 +83,17 @@ export default async function ReportPage() {
               const diff = c.amount - (p?.amount ?? 0);
               return (
                 <li key={c.categoryId ?? "none"} className="flex items-center gap-3 text-sm">
-                  <span className="text-lg w-7 text-center" aria-hidden>{c.icon}</span>
-                  <span className="flex-1 font-semibold truncate">{c.name}</span>
-                  <span className="text-xs text-fg-subtle tabular w-16 text-right">{p ? formatMoney(p.amount, cur) : "—"}</span>
-                  <span className="tabular font-bold w-16 text-right">{formatMoney(c.amount, cur)}</span>
-                  <span className={cn("tabular text-xs font-bold w-16 text-right", diff > 0 ? "text-negative" : diff < 0 ? "text-positive" : "text-fg-subtle")}>
-                    {diff > 0 ? "+" : ""}{formatMoney(diff, cur)}
-                  </span>
+                  <IconBubble icon={c.icon} color={c.color} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold truncate">{c.name}</div>
+                    <div className="text-xs text-fg-subtle tabular">{p ? `${formatMoney(p.amount, cur)} en ${prevShort}` : `rien en ${prevShort}`}</div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="tabular font-bold">{formatMoney(c.amount, cur)}</div>
+                    <div className={cn("tabular text-xs font-bold", diff > 0 ? "text-negative" : diff < 0 ? "text-positive" : "text-fg-subtle")}>
+                      {diff > 0 ? "+" : ""}{formatMoney(diff, cur)}
+                    </div>
+                  </div>
                 </li>
               );
             })}
@@ -102,7 +109,7 @@ export default async function ReportPage() {
   );
 }
 
-function pctSub(p: number | null, monthOver: boolean) {
-  if (p === null) return "vs mois dernier : —";
-  return `${p > 0 ? "+" : ""}${formatPercent(p)} vs mois dernier${monthOver ? "" : " à date"}`;
+function pctSub(p: number | null, prevShort: string) {
+  if (p === null) return `vs ${prevShort} : —`;
+  return `${p > 0 ? "+" : ""}${formatPercent(p)} vs ${prevShort}`;
 }
