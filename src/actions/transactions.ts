@@ -1,0 +1,108 @@
+"use server";
+
+import { transactionSchema, uuid } from "@/lib/validation/schemas";
+import { INCOME_TYPE_CATEGORY_SLUG } from "@/lib/constants";
+import { parseInput, requireUser, revalidateApp, run, type ActionResult } from "./_helpers";
+
+/** Marks a goal completed when its saved amount reaches the target. */
+async function refreshGoalCompletion(supabase: Awaited<ReturnType<typeof requireUser>>["supabase"], goalId: string) {
+  const { data: goal } = await supabase.from("savings_goals").select("id, target_amount, initial_amount, is_completed").eq("id", goalId).maybeSingle();
+  if (!goal) return;
+  const { data: contributions } = await supabase.from("transactions").select("amount").eq("savings_goal_id", goalId).eq("type", "saving");
+  const saved = Number(goal.initial_amount) + (contributions ?? []).reduce((a, c) => a + Number(c.amount), 0);
+  const done = saved >= Number(goal.target_amount);
+  if (done !== goal.is_completed) await supabase.from("savings_goals").update({ is_completed: done }).eq("id", goalId);
+}
+
+/** Picks the right category automatically for income / saving entries when none is given. */
+async function resolveCategory(
+  supabase: Awaited<ReturnType<typeof requireUser>>["supabase"],
+  userId: string,
+  data: { type: string; category_id: string | null; income_id: string | null },
+) {
+  if (data.category_id) return data.category_id;
+  let slug: string | null = null;
+  if (data.type === "saving") slug = "saving";
+  if (data.type === "income") {
+    if (data.income_id) {
+      const { data: src } = await supabase.from("income").select("type").eq("id", data.income_id).maybeSingle();
+      slug = src ? INCOME_TYPE_CATEGORY_SLUG[src.type] : "other_income";
+    } else slug = "other_income";
+  }
+  if (!slug) return null;
+  const { data: cat } = await supabase.from("categories").select("id").eq("user_id", userId).eq("slug", slug).maybeSingle();
+  return cat?.id ?? null;
+}
+
+export async function createTransaction(input: unknown): Promise<ActionResult<{ id: string }>> {
+  return run(async () => {
+    const parsed = parseInput(transactionSchema, input);
+    if (!parsed.ok) return parsed;
+    const { supabase, user } = await requireUser();
+    const d = parsed.data;
+    const category_id = await resolveCategory(supabase, user.id, d);
+    const { data, error } = await supabase
+      .from("transactions")
+      .insert({ ...d, category_id, user_id: user.id, notes: d.notes ?? null })
+      .select("id")
+      .single();
+    if (error) return { ok: false, error: error.message };
+    if (d.type === "saving" && d.savings_goal_id) await refreshGoalCompletion(supabase, d.savings_goal_id);
+    revalidateApp();
+    return { ok: true, data: { id: data.id } };
+  });
+}
+
+export async function updateTransaction(id: string, input: unknown): Promise<ActionResult<null>> {
+  return run(async () => {
+    if (!uuid.safeParse(id).success) return { ok: false, error: "Identifiant invalide" };
+    const parsed = parseInput(transactionSchema, input);
+    if (!parsed.ok) return parsed;
+    const { supabase, user } = await requireUser();
+    const d = parsed.data;
+    const { data: before } = await supabase.from("transactions").select("savings_goal_id").eq("id", id).maybeSingle();
+    const category_id = await resolveCategory(supabase, user.id, d);
+    const { error } = await supabase
+      .from("transactions")
+      .update({ ...d, category_id, notes: d.notes ?? null })
+      .eq("id", id)
+      .eq("user_id", user.id);
+    if (error) return { ok: false, error: error.message };
+    for (const g of new Set([before?.savings_goal_id, d.savings_goal_id])) if (g) await refreshGoalCompletion(supabase, g);
+    revalidateApp();
+    return { ok: true, data: null };
+  });
+}
+
+export async function deleteTransaction(id: string): Promise<ActionResult<null>> {
+  return run(async () => {
+    if (!uuid.safeParse(id).success) return { ok: false, error: "Identifiant invalide" };
+    const { supabase, user } = await requireUser();
+    const { data: before } = await supabase.from("transactions").select("savings_goal_id").eq("id", id).maybeSingle();
+    const { error } = await supabase.from("transactions").delete().eq("id", id).eq("user_id", user.id);
+    if (error) return { ok: false, error: error.message };
+    if (before?.savings_goal_id) await refreshGoalCompletion(supabase, before.savings_goal_id);
+    revalidateApp();
+    return { ok: true, data: null };
+  });
+}
+
+export async function duplicateTransaction(id: string, date?: string): Promise<ActionResult<{ id: string }>> {
+  return run(async () => {
+    if (!uuid.safeParse(id).success) return { ok: false, error: "Identifiant invalide" };
+    const { supabase, user } = await requireUser();
+    const { data: src } = await supabase.from("transactions").select("*").eq("id", id).eq("user_id", user.id).maybeSingle();
+    if (!src) return { ok: false, error: "Transaction introuvable" };
+    const { id: _id, created_at: _c, updated_at: _u, recurring_expense_id: _r, ...rest } = src;
+    void _id; void _c; void _u; void _r;
+    const { data, error } = await supabase
+      .from("transactions")
+      .insert({ ...rest, date: date ?? src.date, is_demo: false })
+      .select("id")
+      .single();
+    if (error) return { ok: false, error: error.message };
+    if (src.savings_goal_id) await refreshGoalCompletion(supabase, src.savings_goal_id);
+    revalidateApp();
+    return { ok: true, data: { id: data.id } };
+  });
+}
