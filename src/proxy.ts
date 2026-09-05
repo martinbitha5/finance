@@ -12,6 +12,7 @@ const PUBLIC_PATHS = [
   "/bienvenue",
   "/conditions",
   "/confidentialite",
+  "/api/push-cron", // auth par CRON_SECRET dans la route elle-même
 ];
 
 function isPublic(pathname: string) {

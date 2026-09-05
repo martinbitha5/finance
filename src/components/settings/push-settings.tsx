@@ -28,12 +28,16 @@ export function PushSettings() {
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
   const detect = useCallback(async (): Promise<Status> => {
+    // iOS n'accepte les push que depuis l'app installée sur l'écran d'accueil — et depuis
+    // iOS 16.4 Safari expose quand même PushManager en onglet, donc ce cas se teste AVANT
+    // le support. L'iPad récent s'annonce comme un Mac, d'où le test tactile.
+    const ua = navigator.userAgent;
+    const ios = /iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+    const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as unknown as { standalone?: boolean }).standalone === true;
+    if (ios && !standalone) return "needs-install";
+
     const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
-    if (!supported) {
-      const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
-      const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as unknown as { standalone?: boolean }).standalone === true;
-      return ios && !standalone ? "needs-install" : "unsupported";
-    }
+    if (!supported) return "unsupported";
     if (Notification.permission === "denied") return "denied";
     const reg = await navigator.serviceWorker.getRegistration();
     const sub = await reg?.pushManager.getSubscription();

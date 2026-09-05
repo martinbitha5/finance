@@ -98,6 +98,10 @@ scripts/generate-icons.mjs  génère les icônes PWA et les assets de marque
 - **Dettes** (`debts`) : ce que je dois (`owed`) et ce qu'on me doit (`lent`). Les remboursements sont des transactions liées (`transactions.debt_id`) ; la dette passe « liquidée » quand ils atteignent le capital. La mensualité prévue non encore payée dans le cycle est retirée de l'argent libre. Pour chaque dette : restant, % remboursé, jours/mois avant l'échéance, mensualité requise pour tenir la date, date de liquidation estimée au rythme prévu.
 - **Multi-devises** : les montants sont stockés dans leur devise ; l'affichage convertit avec les taux définis dans Paramètres et affiche toujours le taux utilisé.
 
+## Photo de profil
+
+`profiles.avatar_url` + bucket Storage `avatars` (public en lecture, écriture limitée au dossier `{user_id}/` par RLS, 2 Mo max). L'image est recadrée en carré 512 px et compressée en WebP côté client ([`src/lib/avatar.ts`](src/lib/avatar.ts)) avant l'upload ([`src/components/settings/avatar-picker.tsx`](src/components/settings/avatar-picker.tsx)) ; le nom de fichier contient un timestamp (pas de cache périmé) et les anciennes photos sont supprimées. L'action `saveAvatar` ([`src/actions/settings.ts`](src/actions/settings.ts)) n'accepte que les URL du dossier Storage de l'utilisateur. Affichage via [`src/components/ui/avatar.tsx`](src/components/ui/avatar.tsx) (repli sur l'initiale) : en-tête de l'accueil, carte profil du menu Plus, bas de la sidebar, Paramètres.
+
 ## Notifications push (Web Push)
 
 Les insights qui méritent une alerte (budget, dette, salaire, objectif, rythme…) créent une ligne `notifications` une fois par cycle de paie ([`src/services/notifications-sync.ts`](src/services/notifications-sync.ts)). Les **nouvelles** lignes sont aussi poussées sur les appareils abonnés (`push_subscriptions`, un abonnement par navigateur, RLS) via [`src/lib/push/server.ts`](src/lib/push/server.ts) (`web-push`, protocole VAPID). Le service worker [`public/sw.js`](public/sw.js) affiche la notification et ouvre l'écran concerné au clic. Réglage et test : Paramètres → « Notifications push » ([`src/components/settings/push-settings.tsx`](src/components/settings/push-settings.tsx)).
@@ -107,6 +111,14 @@ Les insights qui méritent une alerte (budget, dette, salaire, objectif, rythme�
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | clé publique VAPID (envoyée au navigateur pour s'abonner) |
 | `VAPID_PRIVATE_KEY` | clé privée VAPID, serveur uniquement |
 | `VAPID_SUBJECT` | contact `mailto:` exigé par le protocole |
+| `SUPABASE_SECRET_KEY` | clé secrète Supabase (service role) pour le cron, serveur uniquement |
+| `CRON_SECRET` | secret exigé par `/api/push-cron` (Vercel Cron l'envoie en `Authorization: Bearer`) |
+
+### Envoi app fermée (cron)
+
+La synchro ci-dessus ne tourne que quand l'app charge ses données, donc app ouverte. Pour recevoir des alertes app fermée, un cron Vercel quotidien (`vercel.json`, 6 h UTC) appelle [`src/app/api/push-cron/route.ts`](src/app/api/push-cron/route.ts) : pour chaque utilisateur ayant au moins un abonnement push, il charge ses données avec le client service-role ([`src/lib/supabase/admin.ts`](src/lib/supabase/admin.ts)), poste les charges récurrentes dues et déclenche `syncNotifications` — même dédoublonnage par cycle, donc aucune alerte en double avec la synchro « app ouverte ». Le service worker gère aussi `pushsubscriptionchange` : quand le navigateur fait tourner l'endpoint, il se réabonne et le renvoie à [`src/app/api/push/subscription/route.ts`](src/app/api/push/subscription/route.ts).
+
+À savoir : le toggle « Notifications » du bloc Profil (`settings.notifications_enabled`) coupe toutes les alertes, indépendamment du toggle « Notifications push » par appareil. Sur iPhone, les push exigent l'app installée sur l'écran d'accueil (iOS 16.4+) — l'écran Paramètres l'explique désormais aussi quand Safari expose `PushManager` en onglet.
 
 Générer une paire : `node -e "console.log(require('web-push').generateVAPIDKeys())"`. Changer les clés invalide tous les abonnements existants.
 

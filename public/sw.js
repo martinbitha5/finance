@@ -1,5 +1,5 @@
 /* MONY service worker — app-shell caching, network-first pages, offline fallback, Web Push. */
-const VERSION = "mony-v3";
+const VERSION = "mony-v4";
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGE_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = "/offline";
@@ -83,6 +83,27 @@ self.addEventListener("push", (event) => {
     vibrate: [80, 40, 80],
   };
   event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Le navigateur (surtout Chrome/Android) fait tourner les abonnements push : sans ce handler,
+// l'appareil cesse silencieusement de recevoir des notifications. On se réabonne avec la même
+// clé VAPID et on renvoie le nouvel endpoint au serveur (cookies de session inclus).
+self.addEventListener("pushsubscriptionchange", (event) => {
+  const key = event.oldSubscription && event.oldSubscription.options ? event.oldSubscription.options.applicationServerKey : null;
+  if (!key) return;
+  event.waitUntil(
+    self.registration.pushManager
+      .subscribe({ userVisibleOnly: true, applicationServerKey: key })
+      .then((sub) =>
+        fetch("/api/push/subscription", {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(sub.toJSON()),
+        }),
+      )
+      .catch(() => undefined),
+  );
 });
 
 self.addEventListener("notificationclick", (event) => {

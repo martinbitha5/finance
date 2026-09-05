@@ -23,29 +23,40 @@ export async function loadFinanceRaw(): Promise<FinanceRaw | null> {
   if (!user) return null;
   const todayISO = toISODate(today);
 
-  let rows = await loadUserRows(supabase, user.id);
+  let raw = await loadFinanceRawForUser(supabase, user.id, user.email, todayISO);
 
   // Self-heal: users created before the trigger existed, or partial bootstraps (rare).
-  if (!rows.profile || !rows.settings) {
+  if (!raw) {
     await supabase.rpc("ensure_user_bootstrap");
-    rows = await loadUserRows(supabase, user.id);
+    raw = await loadFinanceRawForUser(supabase, user.id, user.email, todayISO);
   }
+  if (!raw) throw new Error("Impossible d'initialiser le profil.");
+  return raw;
+}
+
+/**
+ * Same loading pipeline for an explicit user id — used by the push cron with a service-role
+ * client (RLS bypassed, hence the explicit user_id filters everywhere). Returns null when the
+ * profile or settings row is missing instead of self-healing (no auth context in a cron).
+ */
+export async function loadFinanceRawForUser(supabase: Supabase, userId: string, email: string | null, todayISO: string): Promise<FinanceRaw | null> {
+  let rows = await loadUserRows(supabase, userId);
   const { profile, settings } = rows;
-  if (!profile || !settings) throw new Error("Impossible d'initialiser le profil.");
+  if (!profile || !settings) return null;
 
   // Only touches the DB when a recurring expense is actually due (at most once per due date).
-  const posted = await postDueRecurringExpenses(supabase, user.id, todayISO, rows.recurring);
+  const posted = await postDueRecurringExpenses(supabase, userId, todayISO, rows.recurring);
   if (posted) {
     const [transactions, recurring] = await Promise.all([
-      selectTransactions(supabase, user.id),
-      selectRecurring(supabase, user.id),
+      selectTransactions(supabase, userId),
+      selectRecurring(supabase, userId),
     ]);
     rows = { ...rows, transactions: transactions.data ?? [], recurring: recurring.data ?? [] };
   }
 
   return {
-    userId: user.id,
-    email: user.email,
+    userId,
+    email,
     profile,
     settings,
     accounts: rows.accounts,
