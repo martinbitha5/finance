@@ -77,6 +77,7 @@ export async function contributeToGoal(input: unknown): Promise<ActionResult<{ i
       category_id: null,
       income_id: null,
       account_id: null,
+      debt_id: null,
     });
   });
 }

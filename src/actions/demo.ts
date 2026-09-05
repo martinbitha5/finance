@@ -44,6 +44,7 @@ async function deleteDemoRows(supabase: Awaited<ReturnType<typeof requireUser>>[
   await supabase.from("budgets").delete().eq("user_id", userId).eq("is_demo", true);
   await supabase.from("recurring_expenses").delete().eq("user_id", userId).eq("is_demo", true);
   await supabase.from("savings_goals").delete().eq("user_id", userId).eq("is_demo", true);
+  await supabase.from("debts").delete().eq("user_id", userId).eq("is_demo", true);
   await supabase.from("income").delete().eq("user_id", userId).eq("is_demo", true);
   await supabase.from("notifications").delete().eq("user_id", userId);
 }
@@ -101,9 +102,58 @@ export async function loadDemoData(): Promise<ActionResult<null>> {
       income_id?: string | null;
       savings_goal_id?: string | null;
       recurring_expense_id?: string | null;
+      debt_id?: string | null;
       is_demo: true;
     };
     const rows: TxRow[] = [];
+
+    // Debts: one I owe (with a monthly plan) and one lent to a friend
+    const debtStart = toISODate(addDays(subMonths(cycleStart, 2), 3));
+    const { data: owedDebt } = await supabase
+      .from("debts")
+      .insert({
+        user_id: user.id,
+        direction: "owed",
+        name: "Prêt téléphone",
+        counterparty: "Maman",
+        principal: 200,
+        currency: "USD",
+        start_date: debtStart,
+        due_date: toISODate(addMonths(today, 3)),
+        monthly_payment: 40,
+        is_demo: true,
+      })
+      .select("id")
+      .single();
+    if (owedDebt) {
+      rows.push({ user_id: user.id, type: "income", amount: 200, currency: "USD", category_id: cat("debt_income"), description: "Emprunt · Prêt téléphone", date: debtStart, payment_method: "cash", debt_id: owedDebt.id, is_demo: true });
+      for (let i = 2; i >= 1; i--) {
+        const d = toISODate(addDays(paydayInMonth(subMonths(cycleStart, i - 1), PAY_DAY), 3));
+        if (d <= todayISO) rows.push({ user_id: user.id, type: "expense", amount: 40, currency: "USD", category_id: cat("debt"), description: "Remboursement · Prêt téléphone", date: d, payment_method: "cash", debt_id: owedDebt.id, is_demo: true });
+      }
+    }
+    const lentStart = toISODate(addDays(subMonths(cycleStart, 1), 10));
+    const { data: lentDebt } = await supabase
+      .from("debts")
+      .insert({
+        user_id: user.id,
+        direction: "lent",
+        name: "Avance à Jean",
+        counterparty: "Jean",
+        principal: 60,
+        currency: "USD",
+        start_date: lentStart,
+        due_date: toISODate(addDays(today, 12)),
+        monthly_payment: null,
+        is_demo: true,
+      })
+      .select("id")
+      .single();
+    if (lentDebt) {
+      rows.push({ user_id: user.id, type: "expense", amount: 60, currency: "USD", category_id: cat("debt"), description: "Prêt · Avance à Jean", date: lentStart, payment_method: "mobile_money", debt_id: lentDebt.id, is_demo: true });
+      const back = toISODate(addDays(subMonths(cycleStart, 1), 24));
+      if (back <= todayISO) rows.push({ user_id: user.id, type: "income", amount: 20, currency: "USD", category_id: cat("debt_income"), description: "Remboursement reçu · Avance à Jean", date: back, payment_method: "mobile_money", debt_id: lentDebt.id, is_demo: true });
+    }
 
     // Salaries on each payday of the history window
     for (let i = 2; i >= 0; i--) {

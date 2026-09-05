@@ -18,6 +18,7 @@ import type {
 import { getPayCycle, inRange, monthRange, occurrencesInRange } from "./cycles";
 import { convert } from "./currency";
 import { buildInsights } from "./insights";
+import { computeDebts } from "./debts";
 import { formatMonth, toISODate } from "@/lib/format";
 import { round2, sum } from "@/lib/utils";
 
@@ -110,10 +111,20 @@ export function computeFinance(s: FinanceSnapshot): FinanceSummary {
   const plannedSavings = round2(sum(activeGoals.map((g) => conv(g.monthly_contribution ?? 0, g.currency))));
   const remainingSavings = round2(Math.max(0, plannedSavings - cycleSavings));
 
+  // ---------- Debts ----------
+  const debts = computeDebts(s.debts, all, s.today, cycleRange, s.currency, s.rates);
+  const remainingDebtPayments = round2(sum(debts.map((d) => d.dueThisCycle)));
+  const plannedDebtPayments = round2(
+    sum(debts.filter((d) => d.state !== "settled" && d.debt.direction === "owed").map((d) => Math.min(d.remaining, d.debt.monthly_payment ? conv(d.debt.monthly_payment, d.debt.currency) : 0))),
+  );
+  const totalOwed = round2(sum(debts.filter((d) => d.state !== "settled" && d.debt.direction === "owed").map((d) => d.remaining)));
+  const totalLent = round2(sum(debts.filter((d) => d.state !== "settled" && d.debt.direction === "lent").map((d) => d.remaining)));
+
   // ---------- Safe to spend & daily allowance ----------
-  const safeToSpend = round2(balance - remainingCharges - remainingSavings);
+  const safeToSpend = round2(balance - remainingCharges - remainingSavings - remainingDebtPayments);
   const dailyAllowance = round2(Math.max(0, safeToSpend) / cycle.daysRemaining);
-  const initialBudget = balanceAtCycleStart + (cycleIncome || (salarySource ? conv(salarySource.amount, salarySource.currency) : 0)) - cycleRecurringTotal - plannedSavings;
+  const initialBudget =
+    balanceAtCycleStart + (cycleIncome || (salarySource ? conv(salarySource.amount, salarySource.currency) : 0)) - cycleRecurringTotal - plannedSavings - plannedDebtPayments;
   const initialDailyAllowance = round2(Math.max(0, initialBudget) / cycle.daysTotal);
 
   const todaySpent = round2(sum(posted.filter((t) => t.type === "expense" && t.date === todayISO).map((t) => t.base)));
@@ -257,6 +268,7 @@ export function computeFinance(s: FinanceSnapshot): FinanceSummary {
     remainingCharges,
     plannedSavings,
     remainingSavings,
+    remainingDebtPayments,
     safeToSpend,
     dailyAllowance,
     initialDailyAllowance,
@@ -272,6 +284,9 @@ export function computeFinance(s: FinanceSnapshot): FinanceSummary {
     budgets,
     goals,
     totalSavedInGoals,
+    debts,
+    totalOwed,
+    totalLent,
     balanceHistory,
     monthlyTrend,
     insights: [],

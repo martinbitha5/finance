@@ -11,6 +11,7 @@ import {
   CalendarDays,
   Bell,
   Settings,
+  HandCoins,
   type LucideIcon,
 } from "lucide-react";
 
@@ -32,6 +33,7 @@ export const PRIMARY_NAV: NavItem[] = [
 export const SECONDARY_NAV: NavItem[] = [
   { href: "/transactions", label: "Transactions", icon: ReceiptText, question: "Qu'est-ce que j'ai dépensé ?" },
   { href: "/budgets", label: "Budgets", icon: Wallet, question: "Est-ce que je dépense trop ?" },
+  { href: "/dettes", label: "Dettes", icon: HandCoins, question: "Qu'est-ce que je dois, et à qui ?" },
   { href: "/revenus", label: "Revenus & salaire", icon: Wallet, question: "Combien je gagne ?" },
   { href: "/recurrents", label: "Dépenses récurrentes", icon: Repeat, question: "Quelles sont mes charges ?" },
   { href: "/rapport", label: "Rapport du mois", icon: FileBarChart2, question: "Comment s'est passé le mois ?" },

@@ -210,6 +210,61 @@ export function buildInsights(s: FinanceSummary): Insight[] {
     }
   }
 
+  // Debts
+  for (const d of s.debts) {
+    const who = d.debt.counterparty ? ` (${d.debt.counterparty})` : "";
+    if (d.state === "overdue" && d.debt.direction === "owed") {
+      out.push({
+        id: `debt_overdue_${d.debt.id}`,
+        kind: "debt_overdue",
+        severity: "danger",
+        icon: "🧾",
+        title: `Dette ${d.debt.name}${who} en retard : il reste ${money(d.remaining)} à rembourser.`,
+        body: `Échéance dépassée depuis ${Math.abs(d.daysLeft ?? 0)} jour${Math.abs(d.daysLeft ?? 0) > 1 ? "s" : ""}.`,
+        href: "/dettes",
+      });
+    } else if (d.state === "overdue" && d.debt.direction === "lent") {
+      out.push({
+        id: `lent_overdue_${d.debt.id}`,
+        kind: "debt_overdue",
+        severity: "warning",
+        icon: "🤝",
+        title: `${d.debt.counterparty ?? d.debt.name} devait te rembourser ${money(d.remaining)} avant le ${d.debt.due_date!.split("-").reverse().join("/")}.`,
+        href: "/dettes",
+      });
+    } else if (d.state === "behind" && d.requiredMonthly !== null) {
+      out.push({
+        id: `debt_behind_${d.debt.id}`,
+        kind: "debt_behind",
+        severity: "warning",
+        icon: "🐢",
+        title: `${d.debt.name} : ta mensualité ne suffit pas pour liquider la dette à temps.`,
+        body: `Il faudrait ${money(d.requiredMonthly)}/mois au lieu de ${money(d.debt.monthly_payment ?? 0)}.`,
+        href: "/dettes",
+      });
+    } else if (d.state !== "settled" && d.daysLeft !== null && d.daysLeft >= 0 && d.daysLeft <= 7 && d.remaining > 0) {
+      out.push({
+        id: `debt_due_${d.debt.id}`,
+        kind: "debt_due",
+        severity: "warning",
+        icon: "⏳",
+        title: d.daysLeft === 0 ? `${d.debt.name} : échéance aujourd'hui (${money(d.remaining)} restants).` : `${d.debt.name} : échéance dans ${d.daysLeft} jour${d.daysLeft > 1 ? "s" : ""} (${money(d.remaining)} restants).`,
+        href: "/dettes",
+      });
+    }
+  }
+  if (s.totalOwed > 0 && s.cycle.income > 0 && s.totalOwed >= s.cycle.income) {
+    out.push({
+      id: "debt_load",
+      kind: "debt_load",
+      severity: "info",
+      icon: "🧾",
+      title: `Tes dettes (${money(s.totalOwed)}) dépassent un mois de revenus.`,
+      body: "Une mensualité fixe par dette t'aide à les liquider sans surprise.",
+      href: "/dettes",
+    });
+  }
+
   // Salary arriving soon
   if (s.salary.configured && s.cycle.daysRemaining <= 3) {
     out.push({

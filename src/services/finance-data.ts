@@ -66,6 +66,7 @@ export const getFinanceData = cache(async (): Promise<FinanceData | null> => {
     recurring: rows.recurring,
     incomeSources: rows.incomeSources,
     goals: rows.goals,
+    debts: rows.debts,
   };
 
   return {
@@ -87,7 +88,7 @@ const selectRecurring = (supabase: Supabase, userId: string) =>
 
 /** Every table the app needs, fetched in one parallel batch. */
 async function loadUserRows(supabase: Supabase, userId: string) {
-  const [profile, settings, accounts, categories, transactions, budgets, recurring, incomeSources, goals, unread] =
+  const [profile, settings, accounts, categories, transactions, budgets, recurring, incomeSources, goals, unread, debts] =
     await Promise.all([
       supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
       supabase.from("settings").select("*").eq("user_id", userId).maybeSingle(),
@@ -99,6 +100,7 @@ async function loadUserRows(supabase: Supabase, userId: string) {
       supabase.from("income").select("*").eq("user_id", userId).order("created_at"),
       supabase.from("savings_goals").select("*").eq("user_id", userId).order("created_at"),
       supabase.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("is_read", false),
+      supabase.from("debts").select("*").eq("user_id", userId).order("created_at"),
     ]);
 
   return {
@@ -112,6 +114,7 @@ async function loadUserRows(supabase: Supabase, userId: string) {
     incomeSources: incomeSources.data ?? [],
     goals: goals.data ?? [],
     unread: unread.count ?? 0,
+    debts: debts.data ?? [],
   };
 }
 

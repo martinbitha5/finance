@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameMonth, parseISO, startOfMonth, startOfWeek, subMonths } from "date-fns";
 import { fr } from "date-fns/locale";
-import type { Category, IncomeSource, RecurringExpense, SavingsGoal, Transaction } from "@/lib/finance/types";
+import type { Category, Debt, IncomeSource, RecurringExpense, SavingsGoal, Transaction } from "@/lib/finance/types";
 import type { Currency } from "@/lib/constants";
 import { formatMoney, formatMonth, toISODate, formatDayLabel } from "@/lib/format";
 import { occurrencesInRange, paydayInMonth } from "@/lib/finance/cycles";
@@ -19,7 +19,7 @@ interface Event {
   color: string;
   label: string;
   amount: number | null;
-  kind: "salary" | "expense" | "income" | "saving" | "recurring" | "goal";
+  kind: "salary" | "expense" | "income" | "saving" | "recurring" | "goal" | "debt";
   planned: boolean;
 }
 
@@ -28,6 +28,7 @@ export function FinancialCalendar({
   recurring,
   incomeSources,
   goals,
+  debts = [],
   categories,
   currency,
   rates,
@@ -37,6 +38,7 @@ export function FinancialCalendar({
   recurring: RecurringExpense[];
   incomeSources: IncomeSource[];
   goals: SavingsGoal[];
+  debts?: Debt[];
   categories: Category[];
   currency: Currency;
   rates: Record<Currency, number>;
@@ -84,8 +86,14 @@ export function FinancialCalendar({
         out.push({ id: `goal:${g.id}`, date: g.target_date, icon: g.icon, color: "#EAB308", label: `Objectif ${g.name}`, amount: null, kind: "goal", planned: true });
       }
     }
+    for (const d of debts) {
+      if (d.due_date && d.due_date >= start && d.due_date < end && !d.is_settled) {
+        const owed = d.direction === "owed";
+        out.push({ id: `debt:${d.id}`, date: d.due_date, icon: owed ? "🧾" : "🤝", color: owed ? "#DC2626" : "#0D9488", label: owed ? `Échéance dette · ${d.name}` : `${d.counterparty ?? d.name} doit rembourser`, amount: null, kind: "debt", planned: true });
+      }
+    }
     return out.sort((a, b) => a.date.localeCompare(b.date));
-  }, [month, transactions, recurring, incomeSources, goals, catById, currency, rates, today]);
+  }, [month, transactions, recurring, incomeSources, goals, debts, catById, currency, rates, today]);
 
   const byDay = useMemo(() => {
     const map = new Map<string, Event[]>();
@@ -129,7 +137,7 @@ export function FinancialCalendar({
                 {evs.length > 0 ? (
                   <span className="flex gap-0.5 mt-0.5">
                     {evs.slice(0, 3).map((e) => (
-                      <i key={e.id} className={cn("h-1.5 w-1.5 rounded-full", e.planned && "ring-1 ring-inset ring-current opacity-70")} style={{ background: e.kind === "salary" ? "#22C55E" : e.kind === "goal" ? "#EAB308" : e.color }} />
+                      <i key={e.id} className={cn("h-1.5 w-1.5 rounded-full", e.planned && "ring-1 ring-inset ring-current opacity-70")} style={{ background: e.kind === "salary" ? "#22C55E" : e.kind === "goal" ? "#EAB308" : e.kind === "debt" ? "#DC2626" : e.color }} />
                     ))}
                   </span>
                 ) : (
@@ -171,7 +179,7 @@ function EventList({ events, currency, showDate }: { events: Event[]; currency: 
             <div className="font-semibold truncate">{e.label}</div>
             <div className="text-xs text-fg-muted">
               {showDate ? <span className="capitalize">{format(parseISO(e.date), "EEE d MMM", { locale: fr })} · </span> : null}
-              {e.planned ? (e.kind === "goal" ? "date cible" : "prévu") : "enregistré"}
+              {e.planned ? (e.kind === "goal" ? "date cible" : e.kind === "debt" ? "échéance" : "prévu") : "enregistré"}
             </div>
           </div>
           {e.amount !== null ? (

@@ -11,6 +11,33 @@ export type Account = Tables<"accounts">;
 export type Settings = Tables<"settings">;
 export type Profile = Tables<"profiles">;
 export type AppNotification = Tables<"notifications">;
+export type Debt = Tables<"debts">;
+
+export type DebtState = "settled" | "overdue" | "behind" | "on_track" | "no_plan";
+
+export interface DebtStatus {
+  debt: Debt;
+  /** Principal converted to the display currency. */
+  principal: number;
+  /** Sum of repayments (owed) or amounts received back (lent). */
+  repaid: number;
+  remaining: number;
+  percent: number;
+  /** Months until due_date (null without a due date). */
+  monthsLeft: number | null;
+  daysLeft: number | null;
+  /** Monthly amount needed to be settled by due_date. */
+  requiredMonthly: number | null;
+  /** Estimated settlement date at the planned monthly payment. */
+  projectedSettleDate: string | null;
+  /** Months needed at the planned monthly payment. */
+  monthsAtPlan: number | null;
+  paidThisCycle: number;
+  /** Planned payment still to make this cycle (owed only). */
+  dueThisCycle: number;
+  state: DebtState;
+  lastPaymentDate: string | null;
+}
 
 /** Everything the finance engine needs — raw rows from the database + context. */
 export interface FinanceSnapshot {
@@ -24,6 +51,7 @@ export interface FinanceSnapshot {
   recurring: RecurringExpense[];
   incomeSources: IncomeSource[];
   goals: SavingsGoal[];
+  debts: Debt[];
 }
 
 export interface DateRange {
@@ -142,7 +170,9 @@ export interface FinanceSummary {
   remainingCharges: number;
   plannedSavings: number;
   remainingSavings: number;
-  /** balance − remainingCharges − remainingSavings */
+  /** Debt repayments planned this cycle and not yet paid. */
+  remainingDebtPayments: number;
+  /** balance − remainingCharges − remainingSavings − remainingDebtPayments */
   safeToSpend: number;
   dailyAllowance: number;
   initialDailyAllowance: number;
@@ -160,6 +190,11 @@ export interface FinanceSummary {
   budgets: BudgetStatus[];
   goals: GoalStatus[];
   totalSavedInGoals: number;
+  debts: DebtStatus[];
+  /** Remaining amount I still owe (active debts). */
+  totalOwed: number;
+  /** Remaining amount others still owe me (active debts). */
+  totalLent: number;
   balanceHistory: BalancePoint[];
   monthlyTrend: { key: string; label: string; income: number; expenses: number; savings: number }[];
   insights: Insight[];

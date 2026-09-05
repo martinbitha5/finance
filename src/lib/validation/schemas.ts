@@ -31,8 +31,34 @@ export const transactionSchema = z.object({
   savings_goal_id: optionalUuid,
   income_id: optionalUuid,
   account_id: optionalUuid,
+  debt_id: optionalUuid.default(null),
 });
 export type TransactionInput = z.infer<typeof transactionSchema>;
+
+export const debtSchema = z.object({
+  direction: z.enum(E.debt_direction).default("owed"),
+  name: z.string().trim().min(1, "Nom requis").max(60),
+  counterparty: z.string().trim().max(60).optional().nullable(),
+  principal: amountSchema,
+  currency: currencySchema,
+  start_date: isoDate,
+  due_date: z.preprocess((v) => (v === "" || v === undefined ? null : v), isoDate.nullable()).default(null),
+  monthly_payment: z.preprocess((v) => (v === "" || v === undefined ? null : v), z.coerce.number().min(0).nullable()).default(null),
+  notes: z.string().trim().max(500).optional().nullable(),
+  /** Record the initial money movement (received / given) as a transaction. */
+  record_disbursement: z.coerce.boolean().default(true),
+  /** Amount already repaid before tracking in MONY. */
+  already_repaid: z.coerce.number().min(0).default(0),
+});
+export type DebtInput = z.infer<typeof debtSchema>;
+
+export const debtPaymentSchema = z.object({
+  debt_id: uuid,
+  amount: amountSchema,
+  currency: currencySchema,
+  date: isoDate,
+  payment_method: paymentMethodSchema.default("cash"),
+});
 
 export const categorySchema = z.object({
   name: z.string().trim().min(1, "Nom requis").max(40),

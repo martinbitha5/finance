@@ -17,6 +17,7 @@ export function DailyAllowanceCard({ s, expanded = false }: { s: FinanceSummary;
     { label: "Solde actuel", value: s.balance },
     { label: "Charges restantes", value: -s.remainingCharges, muted: true },
     { label: "Épargne protégée", value: -s.remainingSavings, muted: true },
+    ...(s.remainingDebtPayments > 0 ? [{ label: "Mensualités de dettes", value: -s.remainingDebtPayments, muted: true }] : []),
     { label: "Argent disponible", value: s.safeToSpend, strong: true },
   ];
 

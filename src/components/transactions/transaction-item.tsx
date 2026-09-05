@@ -38,7 +38,7 @@ export function TransactionItem({
       <div className="flex-1 min-w-0">
         <div className="text-[15px] font-semibold truncate">{tx.description || category?.name || (isIncome ? "Revenu" : "Dépense")}</div>
         <div className="text-xs text-fg-muted truncate">
-          {[showDate, category?.name, method?.label, tx.recurring_expense_id ? "récurrent" : null].filter(Boolean).join(" · ")}
+          {[showDate, category?.name, method?.label, tx.recurring_expense_id ? "récurrent" : null, tx.debt_id ? "dette" : null].filter(Boolean).join(" · ")}
         </div>
       </div>
       <div className="text-right shrink-0">

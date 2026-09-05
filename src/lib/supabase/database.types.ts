@@ -134,6 +134,63 @@ export type Database = {
         };
         Relationships: [];
       };
+      debts: {
+        Row: {
+          counterparty: string | null;
+          created_at: string;
+          currency: Database["public"]["Enums"]["currency_code"];
+          direction: Database["public"]["Enums"]["debt_direction"];
+          due_date: string | null;
+          id: string;
+          is_demo: boolean;
+          is_settled: boolean;
+          monthly_payment: number | null;
+          name: string;
+          notes: string | null;
+          principal: number;
+          settled_at: string | null;
+          start_date: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          counterparty?: string | null;
+          created_at?: string;
+          currency?: Database["public"]["Enums"]["currency_code"];
+          direction?: Database["public"]["Enums"]["debt_direction"];
+          due_date?: string | null;
+          id?: string;
+          is_demo?: boolean;
+          is_settled?: boolean;
+          monthly_payment?: number | null;
+          name: string;
+          notes?: string | null;
+          principal: number;
+          settled_at?: string | null;
+          start_date?: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          counterparty?: string | null;
+          created_at?: string;
+          currency?: Database["public"]["Enums"]["currency_code"];
+          direction?: Database["public"]["Enums"]["debt_direction"];
+          due_date?: string | null;
+          id?: string;
+          is_demo?: boolean;
+          is_settled?: boolean;
+          monthly_payment?: number | null;
+          name?: string;
+          notes?: string | null;
+          principal?: number;
+          settled_at?: string | null;
+          start_date?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       income: {
         Row: {
           amount: number;
@@ -402,6 +459,7 @@ export type Database = {
           created_at: string;
           currency: Database["public"]["Enums"]["currency_code"];
           date: string;
+          debt_id: string | null;
           description: string;
           id: string;
           income_id: string | null;
@@ -421,6 +479,7 @@ export type Database = {
           created_at?: string;
           currency?: Database["public"]["Enums"]["currency_code"];
           date?: string;
+          debt_id?: string | null;
           description?: string;
           id?: string;
           income_id?: string | null;
@@ -440,6 +499,7 @@ export type Database = {
           created_at?: string;
           currency?: Database["public"]["Enums"]["currency_code"];
           date?: string;
+          debt_id?: string | null;
           description?: string;
           id?: string;
           income_id?: string | null;
@@ -465,6 +525,13 @@ export type Database = {
             columns: ["category_id"];
             isOneToOne: false;
             referencedRelation: "categories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "transactions_debt_id_fkey";
+            columns: ["debt_id"];
+            isOneToOne: false;
+            referencedRelation: "debts";
             referencedColumns: ["id"];
           },
           {
@@ -502,6 +569,7 @@ export type Database = {
       account_type: "cash" | "bank" | "mobile_money" | "other";
       category_kind: "expense" | "income" | "saving";
       currency_code: "USD" | "CDF" | "EUR" | "GBP";
+      debt_direction: "owed" | "lent";
       goal_kind: "phone" | "car" | "travel" | "house" | "emergency" | "custom";
       income_type: "salary" | "bonus" | "freelance" | "business" | "gift" | "other";
       notification_severity: "info" | "success" | "warning" | "danger";
@@ -529,6 +597,7 @@ export const Constants = {
       account_type: ["cash", "bank", "mobile_money", "other"],
       category_kind: ["expense", "income", "saving"],
       currency_code: ["USD", "CDF", "EUR", "GBP"],
+      debt_direction: ["owed", "lent"],
       goal_kind: ["phone", "car", "travel", "house", "emergency", "custom"],
       income_type: ["salary", "bonus", "freelance", "business", "gift", "other"],
       notification_severity: ["info", "success", "warning", "danger"],

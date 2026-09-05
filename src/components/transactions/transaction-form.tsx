@@ -71,6 +71,7 @@ export function TransactionForm(p: TransactionFormProps) {
       savings_goal_id: type === "saving" ? goalId : null,
       income_id: type === "income" ? incomeId : null,
       account_id: null,
+      debt_id: p.initial?.debt_id ?? null,
     };
     if (p.initial) update.execute(payload);
     else create.execute(payload);

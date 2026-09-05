@@ -14,6 +14,7 @@ export default async function CalendarPage() {
         recurring={snapshot.recurring}
         incomeSources={snapshot.incomeSources}
         goals={snapshot.goals}
+        debts={snapshot.debts}
         categories={snapshot.categories}
         currency={s.currency}
         rates={s.rates}

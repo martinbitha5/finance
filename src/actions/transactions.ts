@@ -3,6 +3,7 @@
 import { transactionSchema, uuid } from "@/lib/validation/schemas";
 import { INCOME_TYPE_CATEGORY_SLUG } from "@/lib/constants";
 import { parseInput, requireUser, revalidateApp, run, type ActionResult } from "./_helpers";
+import { refreshDebtSettlement } from "./debts";
 
 /** Marks a goal completed when its saved amount reaches the target. */
 async function refreshGoalCompletion(supabase: Awaited<ReturnType<typeof requireUser>>["supabase"], goalId: string) {
@@ -60,15 +61,18 @@ export async function updateTransaction(id: string, input: unknown): Promise<Act
     if (!parsed.ok) return parsed;
     const { supabase, user } = await requireUser();
     const d = parsed.data;
-    const { data: before } = await supabase.from("transactions").select("savings_goal_id").eq("id", id).maybeSingle();
+    const { data: before } = await supabase.from("transactions").select("savings_goal_id, debt_id").eq("id", id).maybeSingle();
     const category_id = await resolveCategory(supabase, user.id, d);
+    // Keep the debt link when editing a repayment from the transactions screen.
+    const debt_id = d.debt_id ?? before?.debt_id ?? null;
     const { error } = await supabase
       .from("transactions")
-      .update({ ...d, category_id, notes: d.notes ?? null })
+      .update({ ...d, category_id, debt_id, notes: d.notes ?? null })
       .eq("id", id)
       .eq("user_id", user.id);
     if (error) return { ok: false, error: error.message };
     for (const g of new Set([before?.savings_goal_id, d.savings_goal_id])) if (g) await refreshGoalCompletion(supabase, g);
+    if (debt_id) await refreshDebtSettlement(supabase, debt_id);
     revalidateApp();
     return { ok: true, data: null };
   });
@@ -78,10 +82,11 @@ export async function deleteTransaction(id: string): Promise<ActionResult<null>>
   return run(async () => {
     if (!uuid.safeParse(id).success) return { ok: false, error: "Identifiant invalide" };
     const { supabase, user } = await requireUser();
-    const { data: before } = await supabase.from("transactions").select("savings_goal_id").eq("id", id).maybeSingle();
+    const { data: before } = await supabase.from("transactions").select("savings_goal_id, debt_id").eq("id", id).maybeSingle();
     const { error } = await supabase.from("transactions").delete().eq("id", id).eq("user_id", user.id);
     if (error) return { ok: false, error: error.message };
     if (before?.savings_goal_id) await refreshGoalCompletion(supabase, before.savings_goal_id);
+    if (before?.debt_id) await refreshDebtSettlement(supabase, before.debt_id);
     revalidateApp();
     return { ok: true, data: null };
   });
@@ -93,8 +98,8 @@ export async function duplicateTransaction(id: string, date?: string): Promise<A
     const { supabase, user } = await requireUser();
     const { data: src } = await supabase.from("transactions").select("*").eq("id", id).eq("user_id", user.id).maybeSingle();
     if (!src) return { ok: false, error: "Transaction introuvable" };
-    const { id: _id, created_at: _c, updated_at: _u, recurring_expense_id: _r, ...rest } = src;
-    void _id; void _c; void _u; void _r;
+    const { id: _id, created_at: _c, updated_at: _u, recurring_expense_id: _r, debt_id: _d, ...rest } = src;
+    void _id; void _c; void _u; void _r; void _d;
     const { data, error } = await supabase
       .from("transactions")
       .insert({ ...rest, date: date ?? src.date, is_demo: false })

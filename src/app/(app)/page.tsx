@@ -1,13 +1,16 @@
 import Link from "next/link";
+import { after } from "next/server";
 import { ChevronRight } from "lucide-react";
 import { getFinanceData } from "@/services/finance-data";
 import { syncNotifications } from "@/services/notifications-sync";
+import { createClient } from "@/lib/supabase/server";
 import { BalanceCard } from "@/components/dashboard/balance-card";
 import { DailyAllowanceCard } from "@/components/dashboard/daily-allowance-card";
 import { MonthSummary } from "@/components/dashboard/month-summary";
 import { SpendingBreakdown } from "@/components/dashboard/spending-breakdown";
 import { InsightsList } from "@/components/dashboard/insights-list";
 import { UpcomingCharges } from "@/components/dashboard/upcoming-charges";
+import { DebtsCard } from "@/components/dashboard/debts-card";
 import { TransactionItem } from "@/components/transactions/transaction-item";
 import { PageHeader } from "@/components/layout/page-header";
 import { CardTitle } from "@/components/ui/card";
@@ -16,9 +19,11 @@ import { Button } from "@/components/ui/button";
 import { DemoButton } from "@/components/settings/demo-button";
 
 export default async function HomePage() {
-  const data = (await getFinanceData())!;
+  const [data, supabase] = await Promise.all([getFinanceData().then((d) => d!), createClient()]);
   const { summary: s, snapshot, profile, settings } = data;
-  await syncNotifications(data.userId, s, settings.notifications_enabled);
+  // Runs after the response is sent: the upsert no longer adds a DB round-trip before first paint.
+  // The client is created during render (cached, free) because `after` cannot read cookies itself.
+  after(() => syncNotifications(supabase, data.userId, s, settings.notifications_enabled));
 
   const name = profile.display_name?.split(" ")[0] || "";
   const hasAnyData = snapshot.transactions.length > 0;
@@ -58,6 +63,8 @@ export default async function HomePage() {
         total={s.remainingCharges}
         salary={s.salary.configured && s.salary.amount > 0 ? { amount: s.salary.amount, date: s.cycle.nextPayday } : null}
       />
+
+      <DebtsCard debts={s.debts} currency={s.currency} totalOwed={s.totalOwed} totalLent={s.totalLent} />
 
       {recent.length > 0 ? (
         <section className="card p-0 overflow-hidden animate-fade-up" style={{ animationDelay: "360ms" }}>
