@@ -49,8 +49,9 @@ export function computeDebts(
       let monthsAtPlan: number | null = null;
       let projectedSettleDate: string | null = null;
       if (!settled && monthly > 0) {
-        monthsAtPlan = Math.ceil((remaining - paidThisCycle > 0 ? remaining - paidThisCycle : 0) / monthly) + (paidThisCycle > 0 ? 0 : 0);
-        if (remaining <= paidThisCycle) monthsAtPlan = 0;
+        // This cycle still owes `dueThisCycle`; every following cycle pays `monthly`.
+        const afterThisCycle = Math.max(0, remaining - dueThisCycle);
+        monthsAtPlan = (dueThisCycle > 0 ? 1 : 0) + Math.ceil(afterThisCycle / monthly);
         projectedSettleDate = toISODate(addMonths(today, Math.max(0, monthsAtPlan)));
       }
 
