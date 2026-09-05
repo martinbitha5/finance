@@ -58,6 +58,11 @@ export function buildSnapshot(raw: FinanceRaw, today: Date): FinanceSnapshot {
     today,
     currency: raw.settings.currency as Currency,
     rates: normalizeRates(raw.settings.exchange_rates),
+    savingsPlan: {
+      mode: raw.settings.savings_mode === "amount" || raw.settings.savings_mode === "percent" ? raw.settings.savings_mode : "none",
+      value: Number(raw.settings.savings_value) || 0,
+      auto: !!raw.settings.savings_auto,
+    },
     accounts: raw.accounts,
     categories: raw.categories,
     transactions: raw.transactions,

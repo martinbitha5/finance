@@ -22,7 +22,12 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// En développement (localhost), les fichiers de Next n'ont pas de hash : ne jamais les mettre en cache,
+// sinon le navigateur garde du code périmé après chaque modification.
+const IS_DEV = self.location.hostname === "localhost" || self.location.hostname === "127.0.0.1";
+
 self.addEventListener("fetch", (event) => {
+  if (IS_DEV) return;
   const { request } = event;
   if (request.method !== "GET") return;
   const url = new URL(request.url);

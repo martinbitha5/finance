@@ -105,6 +105,7 @@ export function TransactionForm(p: TransactionFormProps) {
         account_id: null,
         debt_id: null,
         recurring_expense_id: null,
+        auto_from_transaction_id: null,
         notes: null,
         is_demo: false,
         created_at: now,

@@ -162,6 +162,9 @@ export async function buildFinanceWorkbook(raw: FinanceRaw, today: Date, scope: 
         { label: "Prochaine paie", value: xlDate(s.cycle.nextPayday), numFmt: FMT_DATE },
         { label: "Jours restants avant la paie", value: s.cycle.daysRemaining },
         ...(s.salary.configured ? [{ label: "Salaire mensuel configuré", value: s.salary.amount, numFmt: money }] : []),
+        ...(s.savingsPlan.mode !== "none"
+          ? [{ label: `Épargne dès la paie${s.savingsPlan.mode === "percent" ? ` (${s.savingsPlan.value} % du salaire)` : ""}${s.savingsPlan.auto ? " · automatique" : ""}`, value: s.savingsPlan.monthlyAmount, numFmt: money, tone: "brand" as Tone }]
+          : []),
       ],
       COLS,
     );

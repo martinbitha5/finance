@@ -49,8 +49,53 @@ export async function createTransaction(input: unknown): Promise<ActionResult<{ 
       .single();
     if (error) return { ok: false, error: error.message };
     if (d.type === "saving" && d.savings_goal_id) await refreshGoalCompletion(supabase, d.savings_goal_id);
+    if (d.type === "income") await autoSaveFromSalary(supabase, user.id, data.id, { amount: d.amount, currency: d.currency, date: d.date, income_id: d.income_id, category_id });
     return { ok: true, data: { id: data.id } };
   });
+}
+
+/**
+ * « Épargne dès la paie » : quand un salaire est enregistré et que le réglage est en mode
+ * automatique, crée aussitôt l'épargne correspondante (montant fixe ou % du salaire), liée au
+ * salaire (supprimée avec lui). Sans le mode automatique, le montant est seulement protégé.
+ */
+async function autoSaveFromSalary(
+  supabase: Awaited<ReturnType<typeof requireUser>>["supabase"],
+  userId: string,
+  salaryTxId: string,
+  tx: { amount: number; currency: "USD" | "CDF" | "EUR" | "GBP"; date: string; income_id: string | null; category_id: string | null },
+) {
+  const [{ data: settings }, { data: cat }, { data: src }] = await Promise.all([
+    supabase.from("settings").select("savings_mode, savings_value, savings_auto, currency").eq("user_id", userId).maybeSingle(),
+    tx.category_id ? supabase.from("categories").select("slug").eq("id", tx.category_id).maybeSingle() : Promise.resolve({ data: null }),
+    tx.income_id ? supabase.from("income").select("type").eq("id", tx.income_id).maybeSingle() : Promise.resolve({ data: null }),
+  ]);
+  const isSalary = src?.type === "salary" || cat?.slug === "salary";
+  if (!isSalary || !settings || !settings.savings_auto || settings.savings_mode === "none" || Number(settings.savings_value) <= 0) return;
+
+  const value = Number(settings.savings_value);
+  const amount = settings.savings_mode === "percent" ? Math.round(tx.amount * value) / 100 : value;
+  const currency = settings.savings_mode === "percent" ? tx.currency : (settings.currency as typeof tx.currency);
+  if (amount <= 0) return;
+
+  const [{ data: savingCat }, { data: goals }] = await Promise.all([
+    supabase.from("categories").select("id").eq("user_id", userId).eq("slug", "saving").maybeSingle(),
+    supabase.from("savings_goals").select("id").eq("user_id", userId).eq("is_archived", false).eq("is_completed", false),
+  ]);
+  const goalId = goals && goals.length === 1 ? goals[0]!.id : null;
+  const { error } = await supabase.from("transactions").insert({
+    user_id: userId,
+    type: "saving",
+    amount,
+    currency,
+    category_id: savingCat?.id ?? null,
+    description: settings.savings_mode === "percent" ? `Épargne automatique · ${value} % du salaire` : "Épargne automatique · salaire",
+    date: tx.date,
+    payment_method: "transfer",
+    savings_goal_id: goalId,
+    auto_from_transaction_id: salaryTxId,
+  });
+  if (!error && goalId) await refreshGoalCompletion(supabase, goalId);
 }
 
 export async function updateTransaction(id: string, input: unknown): Promise<ActionResult<null>> {

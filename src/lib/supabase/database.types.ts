@@ -458,6 +458,9 @@ export type Database = {
           exchange_rates: Json;
           locale: string;
           notifications_enabled: boolean;
+          savings_auto: boolean;
+          savings_mode: string;
+          savings_value: number;
           theme: string;
           updated_at: string;
           user_id: string;
@@ -468,6 +471,9 @@ export type Database = {
           exchange_rates?: Json;
           locale?: string;
           notifications_enabled?: boolean;
+          savings_auto?: boolean;
+          savings_mode?: string;
+          savings_value?: number;
           theme?: string;
           updated_at?: string;
           user_id: string;
@@ -478,6 +484,9 @@ export type Database = {
           exchange_rates?: Json;
           locale?: string;
           notifications_enabled?: boolean;
+          savings_auto?: boolean;
+          savings_mode?: string;
+          savings_value?: number;
           theme?: string;
           updated_at?: string;
           user_id?: string;
@@ -488,6 +497,7 @@ export type Database = {
         Row: {
           account_id: string | null;
           amount: number;
+          auto_from_transaction_id: string | null;
           category_id: string | null;
           created_at: string;
           currency: Database["public"]["Enums"]["currency_code"];
@@ -508,6 +518,7 @@ export type Database = {
         Insert: {
           account_id?: string | null;
           amount: number;
+          auto_from_transaction_id?: string | null;
           category_id?: string | null;
           created_at?: string;
           currency?: Database["public"]["Enums"]["currency_code"];
@@ -528,6 +539,7 @@ export type Database = {
         Update: {
           account_id?: string | null;
           amount?: number;
+          auto_from_transaction_id?: string | null;
           category_id?: string | null;
           created_at?: string;
           currency?: Database["public"]["Enums"]["currency_code"];

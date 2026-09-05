@@ -137,7 +137,13 @@ export function computeFinance(s: FinanceSnapshot): FinanceSummary {
 
   // ---------- Savings plan ----------
   const activeGoals = s.goals.filter((g) => !g.is_archived && !g.is_completed);
-  const plannedSavings = round2(sum(activeGoals.map((g) => conv(g.monthly_contribution ?? 0, g.currency))));
+  const fromGoals = round2(sum(activeGoals.map((g) => conv(g.monthly_contribution ?? 0, g.currency))));
+  // Épargne dès la paie : montant fixe, ou pourcentage du salaire réellement reçu (sinon du salaire configuré).
+  const salaryBase = salaryReceived > 0 ? salaryReceived : salarySource ? conv(salarySource.amount, salarySource.currency) : 0;
+  const planMonthly =
+    s.savingsPlan.mode === "amount" ? s.savingsPlan.value : s.savingsPlan.mode === "percent" ? round2((salaryBase * s.savingsPlan.value) / 100) : 0;
+  // Les objectifs font partie de l'épargne du mois : on protège le plus grand des deux, pas la somme.
+  const plannedSavings = round2(Math.max(fromGoals, planMonthly));
   const remainingSavings = round2(Math.max(0, plannedSavings - cycleSavings));
 
   // ---------- Debts ----------
@@ -314,6 +320,7 @@ export function computeFinance(s: FinanceSnapshot): FinanceSummary {
     },
     plannedSavings,
     remainingSavings,
+    savingsPlan: { ...s.savingsPlan, monthlyAmount: round2(planMonthly), fromGoals },
     remainingDebtPayments,
     safeToSpend,
     dailyAllowance,

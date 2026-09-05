@@ -43,6 +43,16 @@ export async function saveSalary(input: unknown): Promise<ActionResult<{ id: str
       if (error) return { ok: false, error: error.message };
       id = data.id;
     }
+    // Épargne dès la paie (réglage global, montant exprimé dans la devise d'affichage).
+    const { error: settingsError } = await supabase
+      .from("settings")
+      .update({
+        savings_mode: d.savings_mode,
+        savings_value: d.savings_mode === "none" ? 0 : d.savings_value,
+        savings_auto: d.savings_mode !== "none" && d.savings_auto,
+      })
+      .eq("user_id", user.id);
+    if (settingsError) return { ok: false, error: settingsError.message };
     return { ok: true, data: { id } };
   });
 }

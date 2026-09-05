@@ -39,11 +39,20 @@ export interface DebtStatus {
   lastPaymentDate: string | null;
 }
 
+/** Épargne dès la paie, définie dans les réglages (montant dans la devise d'affichage). */
+export interface SavingsPlan {
+  mode: "none" | "amount" | "percent";
+  value: number;
+  /** Créer automatiquement l'épargne quand le salaire est enregistré. */
+  auto: boolean;
+}
+
 /** Everything the finance engine needs — raw rows from the database + context. */
 export interface FinanceSnapshot {
   today: Date;
   currency: Currency;
   rates: Record<Currency, number>;
+  savingsPlan: SavingsPlan;
   accounts: Account[];
   categories: Category[];
   transactions: Transaction[];
@@ -185,8 +194,11 @@ export interface FinanceSummary {
   remainingCharges: number;
   /** Fixed charges as a monthly load, whatever their next due date. */
   recurring: { monthlyTotal: number; activeCount: number; shareOfSalary: number | null; items: RecurringLoad[] };
+  /** Épargne à protéger chaque cycle : max(épargne dès la paie, contributions des objectifs). */
   plannedSavings: number;
   remainingSavings: number;
+  /** Détail du plan d'épargne : réglage + montant mensuel qu'il représente + part venant des objectifs. */
+  savingsPlan: SavingsPlan & { monthlyAmount: number; fromGoals: number };
   /** Debt repayments planned this cycle and not yet paid. */
   remainingDebtPayments: number;
   /** balance − remainingCharges − remainingSavings − remainingDebtPayments */

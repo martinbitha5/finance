@@ -105,12 +105,21 @@ export const incomeSchema = z.object({
 });
 export type IncomeInput = z.infer<typeof incomeSchema>;
 
-export const salarySchema = z.object({
-  amount: z.coerce.number().min(0).max(999_999_999),
-  currency: currencySchema,
-  pay_day: z.coerce.number().int().min(1).max(31),
-  is_variable: z.coerce.boolean().default(false),
-});
+export const salarySchema = z
+  .object({
+    amount: z.coerce.number().min(0).max(999_999_999),
+    currency: currencySchema,
+    pay_day: z.coerce.number().int().min(1).max(31),
+    is_variable: z.coerce.boolean().default(false),
+    /** Épargne dès la paie. */
+    savings_mode: z.enum(["none", "amount", "percent"]).default("none"),
+    savings_value: z.preprocess((v) => (v === "" || v == null ? 0 : v), z.coerce.number().min(0).max(999_999_999)).default(0),
+    savings_auto: z.coerce.boolean().default(false),
+  })
+  .superRefine((d, ctx) => {
+    if (d.savings_mode === "percent" && d.savings_value > 100) ctx.addIssue({ code: "custom", path: ["savings_value"], message: "100 % maximum" });
+    if (d.savings_mode === "amount" && d.amount > 0 && d.savings_value > d.amount) ctx.addIssue({ code: "custom", path: ["savings_value"], message: "Supérieur au salaire" });
+  });
 export type SalaryInput = z.infer<typeof salarySchema>;
 
 export const goalSchema = z.object({

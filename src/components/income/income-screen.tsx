@@ -10,7 +10,7 @@ import { useAction } from "@/hooks/use-action";
 import { Sheet, ConfirmSheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
-import { Chip } from "@/components/ui/segmented";
+import { Chip, Segmented } from "@/components/ui/segmented";
 import { Badge, IconBubble, Toggle, Stat } from "@/components/ui/primitives";
 import { CardTitle } from "@/components/ui/card";
 
@@ -35,6 +35,17 @@ export function IncomeScreen({ s, sources }: { s: FinanceSummary; sources: Incom
                 </div>
                 <div className="text-sm text-ink-muted mt-1">
                   Reçu le <b className="text-ink-fg">{s.salary.payDay}</b> du mois {s.salary.isVariable ? <Badge tone="accent" className="ml-1">variable</Badge> : null}
+                </div>
+                <div className="text-sm text-ink-muted mt-1">
+                  {!s.savingsPlan || s.savingsPlan.mode === "none" ? (
+                    <>Épargne dès la paie : <b className="text-ink-fg">non définie</b></>
+                  ) : (
+                    <>
+                      Épargne dès la paie : <b className="text-ink-fg tabular">{formatMoney(s.savingsPlan.monthlyAmount, s.currency)}</b>
+                      {s.savingsPlan.mode === "percent" ? ` (${s.savingsPlan.value} % du salaire)` : ""}
+                      {s.savingsPlan.auto ? " · automatique" : " · protégée"}
+                    </>
+                  )}
                 </div>
               </>
             ) : (
@@ -125,13 +136,21 @@ export function SalaryForm({ s, onDone, submitLabel }: { s: FinanceSummary; onDo
   const [cur, setCur] = useState<Currency>(src?.currency ?? s.currency);
   const [payDay, setPayDay] = useState(String(src?.pay_day ?? 5));
   const [variable, setVariable] = useState(src?.is_variable ?? false);
+  const plan = s.savingsPlan ?? { mode: "none" as const, value: 0, auto: false, monthlyAmount: 0, fromGoals: 0 };
+  const [savingsMode, setSavingsMode] = useState<"none" | "amount" | "percent">(plan.mode);
+  const [savingsValue, setSavingsValue] = useState(plan.mode === "none" ? "" : String(plan.value));
+  const [savingsAuto, setSavingsAuto] = useState(plan.auto);
   const save = useAction(saveSalary, { success: "Salaire enregistré", onSuccess: onDone });
+  const salaryNum = Number(amount) || 0;
+  const savingsNum = Number(savingsValue) || 0;
+  const savingsPreview = savingsMode === "percent" ? Math.round(salaryNum * savingsNum) / 100 : savingsMode === "amount" ? savingsNum : 0;
+  const savingsShare = savingsMode !== "none" && salaryNum > 0 ? Math.round((savingsPreview / salaryNum) * 100) : 0;
   return (
     <form
       className="flex flex-col gap-4"
       onSubmit={(e) => {
         e.preventDefault();
-        save.execute({ amount, currency: cur, pay_day: payDay, is_variable: variable });
+        save.execute({ amount, currency: cur, pay_day: payDay, is_variable: variable, savings_mode: savingsMode, savings_value: savingsValue, savings_auto: savingsAuto });
       }}
     >
       <div className="grid grid-cols-[1fr_110px] gap-3">
@@ -160,6 +179,43 @@ export function SalaryForm({ s, onDone, submitLabel }: { s: FinanceSummary; onDo
         </div>
         <Toggle checked={variable} onChange={setVariable} label="Salaire variable" />
       </div>
+
+      <div className="rounded-2xl bg-surface-2/70 p-4 flex flex-col gap-3">
+        <div>
+          <div className="text-sm font-semibold">Épargne dès la paie</div>
+          <div className="text-xs text-fg-muted">Ce montant est retiré de ce que tu peux dépenser, comme si tu ne l&apos;avais jamais reçu.</div>
+        </div>
+        <Segmented
+          value={savingsMode}
+          onChange={(m) => { setSavingsMode(m); if (m === "none") setSavingsValue(""); }}
+          options={[
+            { value: "none", label: "Rien" },
+            { value: "amount", label: "Montant fixe" },
+            { value: "percent", label: "% du salaire" },
+          ]}
+          size="sm"
+        />
+        {savingsMode !== "none" ? (
+          <>
+            <Field label={savingsMode === "percent" ? "Pourcentage du salaire" : `Montant par mois (${cur})`} error={save.fields.savings_value}>
+              <Input inputMode="decimal" placeholder={savingsMode === "percent" ? "10" : "100"} value={savingsValue} onChange={(e) => setSavingsValue(e.target.value)} />
+            </Field>
+            {savingsPreview > 0 ? (
+              <p className="text-xs text-fg-muted">
+                Chaque mois, <b className="text-fg tabular">{formatMoney(savingsPreview, cur)}</b> sont mis de côté{salaryNum > 0 ? ` (${savingsShare} % de ton salaire)` : ""}. Il te reste <b className="text-fg tabular">{formatMoney(Math.max(0, salaryNum - savingsPreview), cur)}</b> pour vivre et payer tes charges.
+              </p>
+            ) : null}
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold">Mettre de côté automatiquement</div>
+                <div className="text-xs text-fg-muted">Dès que tu enregistres ton salaire, l&apos;épargne est créée toute seule.</div>
+              </div>
+              <Toggle checked={savingsAuto} onChange={setSavingsAuto} label="Épargne automatique" />
+            </div>
+          </>
+        ) : null}
+      </div>
+
       <Button type="submit" size="lg" full loading={save.pending}>{submitLabel ?? "Enregistrer"}</Button>
     </form>
   );
