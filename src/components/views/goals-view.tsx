@@ -9,7 +9,16 @@ export function GoalsView() {
   return (
     <div>
       <PageHeader title="Mes objectifs" question="Est-ce que je progresse ?" />
-      <GoalsScreen goals={s.goals} currency={s.currency} today={s.today} totalSaved={s.totalSavedInGoals} plannedMonthly={s.plannedSavings} savedThisMonth={s.month.savings} />
+      <GoalsScreen
+        goals={s.goals}
+        currency={s.currency}
+        today={s.today}
+        totalSaved={s.savings.total}
+        inGoals={s.savings.inGoals}
+        unallocated={s.savings.unallocated}
+        plannedMonthly={s.plannedSavings}
+        savedThisMonth={s.month.savings}
+      />
     </div>
   );
 }

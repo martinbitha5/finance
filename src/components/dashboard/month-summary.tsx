@@ -24,7 +24,7 @@ export function MonthSummary({ s }: { s: FinanceSummary }) {
       <div className="grid grid-cols-2 gap-2.5">
         <Stat label="Revenus" value={formatMoney(period.income, cur)} tone="positive" />
         <Stat label="Dépenses" value={formatMoney(period.expenses, cur)} tone="negative" />
-        <Stat label="Épargne" value={formatMoney(period.savings, cur)} />
+        <Stat label="Épargne" value={formatMoney(period.savings, cur)} sub={s.savings.total > 0 ? `${formatMoney(s.savings.total, cur)} mis de côté au total` : undefined} />
         <Stat label="Disponible" value={formatMoney(period.available, cur)} tone={period.available < 0 ? "negative" : undefined} sub={useCycle ? "après épargne" : undefined} />
       </div>
       <div className="mt-4">

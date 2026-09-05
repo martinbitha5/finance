@@ -229,6 +229,10 @@ export function computeFinance(s: FinanceSnapshot): FinanceSummary {
     })
     .sort((a, b) => (a.state === "reached" ? 1 : 0) - (b.state === "reached" ? 1 : 0) || b.percent - a.percent);
   const totalSavedInGoals = round2(sum(goals.map((g) => g.saved)));
+  // The savings pot itself: every saving transaction, linked to a goal or not.
+  const savingTx = posted.filter((t) => t.type === "saving");
+  const savingsTotal = round2(sum(savingTx.map((t) => t.base)));
+  const savingsLinked = round2(sum(savingTx.filter((t) => t.savings_goal_id).map((t) => t.base)));
 
   // ---------- Balance history for the current cycle (+ projection) ----------
   const balanceHistory: BalancePoint[] = [];
@@ -320,6 +324,12 @@ export function computeFinance(s: FinanceSnapshot): FinanceSummary {
     budgets,
     goals,
     totalSavedInGoals,
+    savings: {
+      total: savingsTotal,
+      inGoals: totalSavedInGoals,
+      unallocated: round2(Math.max(0, savingsTotal - savingsLinked)),
+      thisCycle: round2(cycleSavings),
+    },
     debts,
     totalOwed,
     totalLent,

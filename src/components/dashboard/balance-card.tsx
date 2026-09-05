@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarClock, ShieldCheck } from "lucide-react";
+import { CalendarClock, PiggyBank, ShieldCheck } from "lucide-react";
 import type { FinanceSummary } from "@/lib/finance/types";
 import { formatMoney, splitMoney, formatDate } from "@/lib/format";
 import { useCountUp } from "@/hooks/use-count-up";
@@ -56,6 +56,16 @@ export function BalanceCard({ s }: { s: FinanceSummary }) {
           <ShieldCheck className="h-3.5 w-3.5" />
           Libre : <span className="tabular">{formatMoney(s.safeToSpend, s.currency)}</span>
         </span>
+        {s.savings.total > 0 ? (
+          <Link
+            href="/objectifs"
+            className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold backdrop-blur hover:bg-white/15"
+            title="Argent mis de côté, non compté dans le solde disponible"
+          >
+            <PiggyBank className="h-3.5 w-3.5" />
+            Épargné : <span className="tabular">{formatMoney(s.savings.total, s.currency)}</span>
+          </Link>
+        ) : null}
       </div>
     </section>
   );

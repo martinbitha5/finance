@@ -121,7 +121,7 @@ export function SettingsScreen({
         <ChevronRight className="h-4 w-4 text-fg-subtle" />
       </Link>
 
-      <ExportPanel transactions={transactions} categories={categories} goals={goals} debts={debts} />
+      <ExportPanel email={email} transactions={transactions} categories={categories} goals={goals} debts={debts} />
 
       <section className="card p-5">
         <CardTitle>Installer l&apos;application</CardTitle>

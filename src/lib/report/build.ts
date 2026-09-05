@@ -7,6 +7,7 @@ import type { CategorySpend, DateRange, Transaction } from "@/lib/finance/types"
 import { formatDate, formatMonth, toISODate } from "@/lib/format";
 import { round2, sum } from "@/lib/utils";
 import { LOGO_MONY } from "./logo";
+import { transactionsToCsv } from "@/lib/export-csv";
 import { injectNativeCharts, type ChartSpec } from "./charts";
 import {
   addSheet,
@@ -32,12 +33,12 @@ import {
 
 import type { ExportScope } from "./scopes";
 
-interface Period extends DateRange {
+export interface Period extends DateRange {
   label: string;
   fileTag: string;
 }
 
-function resolvePeriod(scope: ExportScope, today: Date, cycle: DateRange, transactions: Transaction[]): Period {
+export function resolvePeriod(scope: ExportScope, today: Date, cycle: DateRange, transactions: Transaction[]): Period {
   const todayISO = toISODate(today);
   switch (scope) {
     case "cycle":
@@ -536,4 +537,36 @@ export async function buildFinanceWorkbook(raw: FinanceRaw, today: Date, scope: 
   const buffer = await workbookBuffer(wb);
   const file = charts.length > 0 ? await injectNativeCharts(buffer, "Graphiques", charts) : new Uint8Array(buffer);
   return { file, filename: `MONY-rapport-${period.fileTag}.xlsx` };
+}
+
+export interface FinanceExports {
+  period: Period;
+  currency: Currency;
+  stats: { income: number; expenses: number; savings: number; available: number; count: number };
+  xlsx: { filename: string; file: Uint8Array };
+  csv: { filename: string; content: string };
+}
+
+/** Les deux formats (Excel + CSV) pour un même périmètre, prêts à être envoyés ou téléchargés. */
+export async function buildFinanceExports(raw: FinanceRaw, today: Date, scope: ExportScope): Promise<FinanceExports> {
+  const data = buildFinanceData(raw, today);
+  const s = data.summary;
+  const cur = s.currency as Currency;
+  const todayISO = toISODate(today);
+  const period = resolvePeriod(scope, today, { start: s.cycle.start, end: s.cycle.end }, raw.transactions);
+  const inPeriod = raw.transactions.filter((t) => t.date >= period.start && t.date < period.end && t.date <= todayISO);
+  const base = (t: Transaction) => convert(t.amount, t.currency, cur, s.rates);
+  const income = round2(sum(inPeriod.filter((t) => t.type === "income").map(base)));
+  const expenses = round2(sum(inPeriod.filter((t) => t.type === "expense").map(base)));
+  const savings = round2(sum(inPeriod.filter((t) => t.type === "saving").map(base)));
+
+  const xlsx = await buildFinanceWorkbook(raw, today, scope);
+  const csv = transactionsToCsv(inPeriod, raw.categories, raw.goals, raw.debts);
+  return {
+    period,
+    currency: cur,
+    stats: { income, expenses, savings, available: round2(income - expenses - savings), count: inPeriod.length },
+    xlsx,
+    csv: { filename: `MONY-transactions-${period.fileTag}.csv`, content: csv },
+  };
 }

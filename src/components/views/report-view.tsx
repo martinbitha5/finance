@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { ExportPanel } from "@/components/settings/export-panel";
 
 export function ReportView() {
-  const { summary: s, snapshot } = useFinanceData();
+  const { summary: s, snapshot, email } = useFinanceData();
   const cur = s.currency;
   const m = s.month;
   const catById = new Map(snapshot.categories.map((c) => [c.id, c]));
@@ -107,7 +107,7 @@ export function ReportView() {
         <TrendBars data={s.monthlyTrend} currency={cur} />
       </section>
 
-      <ExportPanel transactions={snapshot.transactions} categories={snapshot.categories} goals={snapshot.goals} debts={snapshot.debts} defaultScope="month" compact />
+      <ExportPanel email={email ?? ""} transactions={snapshot.transactions} categories={snapshot.categories} goals={snapshot.goals} debts={snapshot.debts} defaultScope="month" compact />
     </div>
   );
 }

@@ -14,7 +14,26 @@ import { Chip } from "@/components/ui/segmented";
 import { Badge, EmptyState, IconBubble, Progress } from "@/components/ui/primitives";
 import { cn } from "@/lib/utils";
 
-export function GoalsScreen({ goals, currency, today, totalSaved, plannedMonthly, savedThisMonth }: { goals: GoalStatus[]; currency: Currency; today: string; totalSaved: number; plannedMonthly: number; savedThisMonth: number }) {
+export function GoalsScreen({
+  goals,
+  currency,
+  today,
+  totalSaved,
+  inGoals,
+  unallocated,
+  plannedMonthly,
+  savedThisMonth,
+}: {
+  goals: GoalStatus[];
+  currency: Currency;
+  today: string;
+  /** Every saving transaction, linked to a goal or not. */
+  totalSaved: number;
+  inGoals: number;
+  unallocated: number;
+  plannedMonthly: number;
+  savedThisMonth: number;
+}) {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<GoalStatus | null>(null);
   const [contrib, setContrib] = useState<GoalStatus | null>(null);
@@ -24,14 +43,25 @@ export function GoalsScreen({ goals, currency, today, totalSaved, plannedMonthly
 
   return (
     <div className="flex flex-col gap-4">
-      {goals.length > 0 ? (
+      {goals.length > 0 || totalSaved > 0 ? (
         <section className="aurora rounded-4xl p-5 text-ink-fg shadow-float">
-          <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-muted">Total épargné</div>
+          <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-muted">Total mis de côté</div>
           <div className="text-3xl font-extrabold tabular tracking-tight mt-1">{formatMoney(totalSaved, currency)}</div>
           <div className="mt-2 text-sm text-ink-muted">
             Ce mois-ci : <b className="text-ink-fg tabular">{formatMoney(savedThisMonth, currency)}</b>
             {plannedMonthly > 0 ? <> sur <b className="text-ink-fg tabular">{formatMoney(plannedMonthly, currency)}</b> prévus</> : null}
           </div>
+          {goals.length > 0 ? (
+            <div className="mt-1 text-sm text-ink-muted">
+              Dans tes objectifs : <b className="text-ink-fg tabular">{formatMoney(inGoals, currency)}</b>
+              {unallocated > 0 ? (
+                <>
+                  {" "}· hors objectif : <b className="text-ink-fg tabular">{formatMoney(unallocated, currency)}</b>
+                </>
+              ) : null}
+            </div>
+          ) : null}
+          <p className="mt-3 text-xs text-ink-muted">Cet argent est retiré de ton solde disponible : il est protégé, pas dépensé.</p>
         </section>
       ) : null}
 

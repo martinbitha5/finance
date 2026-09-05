@@ -98,7 +98,18 @@ scripts/generate-icons.mjs  génère les icônes PWA et les assets de marque
 
 ## Export
 
-Deux formats, depuis Paramètres → « Exporter mes données » ou en bas du Rapport du mois :
+Depuis Paramètres → « Recevoir mon rapport par e-mail » ou en bas du Rapport du mois. L'action principale (`emailReport` dans [`src/actions/export.ts`](src/actions/export.ts)) génère les deux formats côté serveur et les envoie **sur l'adresse du compte uniquement**, avec un objet (« Ton rapport MONY · période ») et un message HTML/texte résumant revenus, dépenses, épargne, reste et la liste des pièces jointes ([`src/lib/report/email.ts`](src/lib/report/email.ts)). L'envoi passe par l'API Brevo ([`src/lib/mail/brevo.ts`](src/lib/mail/brevo.ts)) :
+
+| Variable | Rôle |
+| --- | --- |
+| `BREVO_API_KEY` | **Transport 1, recommandé.** Clé API v3 (`xkeysib-…`), <https://app.brevo.com/settings/keys/api>. Passe en HTTPS, donc fonctionne même quand les ports SMTP sont bloqués. |
+| `BREVO_SMTP_KEY` / `BREVO_SMTP_LOGIN` | **Transport 2**, utilisé si `BREVO_API_KEY` est vide. Clé SMTP (`xsmtpsib-…`) et login affichés sur <https://app.brevo.com/settings/keys/smtp> (le login peut être l'e-mail du compte ou une forme `xxxx@smtp-brevo.com`). Relais `smtp-relay.brevo.com:587` via nodemailer ; `BREVO_SMTP_PORT=465` pour TLS implicite. |
+| `MAIL_FROM_EMAIL` | expéditeur validé dans Brevo (défaut `martinbitha6@gmail.com`) |
+| `MAIL_FROM_NAME` | nom d'expéditeur (défaut `MONY`) |
+
+Sans aucun transport, l'app affiche « envoi non activé » et propose le téléchargement direct. Attention : une clé SMTP n'est **pas** acceptée par l'API HTTP (401), et certains réseaux (box, hébergeur) bloquent les ports 25/465/587/2525 sortants : dans ce cas seul le transport API fonctionne.
+
+Le téléchargement direct sur l'appareil reste disponible en repli (« Télécharger sur cet appareil plutôt »). Deux formats :
 
 - **Rapport Excel** (`GET /api/export?scope=month|cycle|quarter|year|all`) : classeur généré côté serveur avec ExcelJS pour l'utilisateur connecté (RLS). Sept feuilles : Synthèse (bandeau de marque + logo, cartes KPI, situation du jour, période, budgets, épargne/dettes, analyse automatique, panneau latéral « où va ton argent »), Transactions (en-tête figé, filtres, pastilles, totaux, taux de change utilisés), Budgets, Objectifs, Dettes, Charges récurrentes, Graphiques (tendance 6 mois, reste mensuel, camembert des catégories). Les graphiques sont de **vrais graphiques Excel** injectés dans le zip OOXML par [`src/lib/report/charts.ts`](src/lib/report/charts.ts). Boîte à outils de mise en forme : [`src/lib/report/xlsx.ts`](src/lib/report/xlsx.ts) ; assemblage : [`src/lib/report/build.ts`](src/lib/report/build.ts). Le logo embarqué (`src/lib/report/logo.ts`) se régénère avec :
 

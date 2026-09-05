@@ -207,6 +207,16 @@ export interface FinanceSummary {
   budgets: BudgetStatus[];
   goals: GoalStatus[];
   totalSavedInGoals: number;
+  /** Money set aside so far (every saving transaction), whether or not it is tied to a goal. */
+  savings: {
+    /** Sum of all posted saving transactions. */
+    total: number;
+    /** Same as totalSavedInGoals: goal starting amounts + contributions linked to goals. */
+    inGoals: number;
+    /** Saving transactions not linked to any goal. */
+    unallocated: number;
+    thisCycle: number;
+  };
   debts: DebtStatus[];
   /** Remaining amount I still owe (active debts). */
   totalOwed: number;
