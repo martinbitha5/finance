@@ -68,6 +68,7 @@ Pièges connus :
 ```
 src/
   app/                 routes (App Router)
+    (marketing)/       pages publiques : /bienvenue (landing), /conditions (CGU), /confidentialite — statiques, sans session ; le proxy redirige les visiteurs non connectés de / vers /bienvenue
     (auth)/            login, signup
     (app)/             écrans authentifiés : accueil, analyse, ajouter, objectifs, plus, transactions, budgets, revenus, récurrents, dettes, rapport, calendrier, notifications, paramètres
     onboarding/        configuration initiale (salaire, date de paie, charges)
